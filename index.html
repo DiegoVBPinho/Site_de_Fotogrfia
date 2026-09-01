@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<!-- Diego Victor Fotografia — versão 4. Nessa versão o conteúdo (álbuns,
+     fotos, sobre mim, contato) passou a vir de uma planilha Google em vez
+     de estar fixo no código — ver js/data.js e o painel "Como atualizar
+     o site" no rodapé. Da próxima vez que pedir uma "nova versão", esse
+     número sobe pra 5, e assim por diante. -->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diego Victor — Fotografia</title>
+<meta name="description" content="Fotografia e videografia em Santa Rita do Sapucaí — eventos, shows e retratos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&family=Inter:wght@400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<nav class="nav" id="nav">
+  <a href="#inicio" class="nav__mark"><img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia"></a>
+  <button class="nav__toggle" id="navToggle" aria-label="Abrir menu"><span></span></button>
+  <ul class="nav__links" id="navLinks">
+    <li><a href="#mural">Álbuns</a></li>
+    <li><a href="#tempo">Linha do Tempo</a></li>
+    <li><a href="#sobre">Sobre mim</a></li>
+    <li><a href="#contato">Contato</a></li>
+  </ul>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero" id="inicio">
+  <div class="hero__mosaic" id="heroMosaic"></div>
+  <div class="hero__content">
+    <div class="hero__logo-wrap">
+      <img class="hero__logo" src="images/brand/logo-color-transparent.png" alt="Diego Victor Fotografia">
+    </div>
+    <div class="hero__actions">
+      <a href="#mural" class="btn btn--primary"><span class="aperture"></span> Ver álbuns</a>
+    </div>
+  </div>
+  <div class="hero__scroll">
+    role para baixo
+    <span class="hero__scroll-arrow">
+      <svg viewBox="0 0 24 24"><path d="M4 8 L12 16 L20 8"/></svg>
+    </span>
+  </div>
+</header>
+
+<!-- ===================== MURAL (ÁLBUNS) ===================== -->
+<section class="section" id="mural">
+  <div class="section__head reveal">
+    <p class="eyebrow">Acervo</p>
+    <h2 class="section__title">Mural de Álbuns</h2>
+    <p class="section__desc">Clique num álbum pra entrar. Alguns álbuns têm outros álbuns dentro.</p>
+  </div>
+
+  <div class="search-bar reveal">
+    <span class="aperture"></span>
+    <input type="text" id="searchInput" placeholder="Buscar por tag, evento ou local...">
+    <button class="search-bar__clear" id="searchClear" style="display:none;">limpar ✕</button>
+  </div>
+
+  <div class="filters reveal" id="filters"></div>
+
+  <div class="corkboard reveal">
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div id="folderZone"></div>
+    <p class="mural-divider" id="photosDividerLabel" style="display:none;">Fotos deste álbum</p>
+    <div class="polaroid-grid" id="muralGrid"></div>
+  </div>
+</section>
+
+<!-- ===================== LINHA DO TEMPO ===================== -->
+<section class="section" id="tempo">
+  <div class="section__head reveal">
+    <p class="eyebrow">Cronologia</p>
+    <h2 class="section__title">Linha do Tempo</h2>
+    <p class="section__desc">Cada álbum aparece pela data da sua primeira foto.</p>
+  </div>
+  <div class="timeline reveal" id="timeline"></div>
+</section>
+
+<!-- ===================== SOBRE MIM ===================== -->
+<section class="section" id="sobre">
+  <div class="sobre reveal">
+    <div class="sobre__portrait"><img src="images/brand/eu.jpg" alt="Diego Victor"></div>
+    <div>
+      <p class="eyebrow">Quem faz</p>
+      <h2 class="section__title" style="margin-bottom:1.4rem;">Sobre mim</h2>
+      <p class="sobre__text" id="sobreTexto"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER / CONTATO ===================== -->
+<footer class="footer" id="contato">
+  <div class="footer__top">
+    <div>
+      <p class="eyebrow" style="margin-bottom:.5rem;">Contato</p>
+      <p style="font-family: var(--font-display); font-weight:700; font-size:1.2rem;">Vamos conversar sobre seu evento ou projeto</p>
+    </div>
+    <ul class="footer__socials">
+      <li><a href="#" id="socialInstagram" title="Configure na aba Config da planilha">Instagram</a></li>
+      <li><a href="#" id="socialWhatsapp" title="Configure na aba Config da planilha">WhatsApp</a></li>
+      <li><a href="#" id="socialEmail" title="Configure na aba Config da planilha">E-mail</a></li>
+    </ul>
+  </div>
+  <img class="footer__signature" src="images/brand/assinatura-white-transparent.png" alt="Assinatura Diego Victor">
+  <div class="footer__bottom">
+    <p class="footer__meta">© Diego Victor Fotografia</p>
+    <button class="footer__admin-link" id="openAdminBtn">Como atualizar o site</button>
+  </div>
+</footer>
+
+<!-- ===================== LIGHTBOX ===================== -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox__close" id="lbClose" aria-label="Fechar">✕</button>
+  <button class="lightbox__prev" id="lbPrev" aria-label="Anterior">‹</button>
+  <button class="lightbox__next" id="lbNext" aria-label="Próxima">›</button>
+  <div class="lightbox__stage" id="lbStage">
+    <div class="lightbox__img-wrap" id="lbImgWrap">
+      <img id="lbImg" src="" alt="">
+    </div>
+  </div>
+  <aside class="lightbox__panel">
+    <p class="lightbox__counter" id="lbCounter"></p>
+    <p class="lightbox__panel-title" id="lbAlbumTitle"></p>
+    <p class="lightbox__panel-date" id="lbDate"></p>
+    <p class="lightbox__panel-local" id="lbLocal"></p>
+    <div class="lightbox__tree" id="lbTree">
+      <p class="lightbox__tree-label">Árvore de álbuns</p>
+      <div id="lbTreeList"></div>
+    </div>
+    <div class="lightbox__tags" id="lbTags"></div>
+    <p class="lightbox__hint">Clique na foto pra ampliar · arraste pro lado pra navegar.</p>
+  </aside>
+</div>
+
+<!-- ===================== COMO ATUALIZAR O SITE ===================== -->
+<div class="admin-overlay" id="adminOverlay">
+  <button class="admin-overlay__close" id="closeAdminBtn" aria-label="Fechar guia">✕</button>
+  <div class="admin-wrap">
+    <div class="admin-header">
+      <img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia">
+      <h1 class="section__title" style="margin-top:0;">Como atualizar <span>o site</span></h1>
+    </div>
+
+    <p class="admin-note">
+      <b>Como isso funciona:</b> os álbuns, fotos, o texto "Sobre mim" e os
+      links de contato vêm de uma <b>planilha Google</b>, não do código.
+      Editou a planilha? É só recarregar o site — sem <code>git push</code>,
+      sem redeploy. Pode levar alguns minutos pra planilha propagar.
+    </p>
+
+    <div class="admin-actions" style="margin-bottom: 2.4rem;">
+      <a class="btn btn--primary" id="openSheetBtn" href="#" target="_blank" rel="noopener"><span class="aperture"></span> Abrir a planilha</a>
+    </div>
+
+    <div class="admin-card">
+      <h2>Adicionar fotos a um álbum</h2>
+      <p class="admin-sub">Na aba <code>Fotos</code>, uma linha por foto.</p>
+      <ol class="admin-steps">
+        <li>Coluna <code>album_id</code>: o id do álbum onde a foto entra (veja a aba <code>Albuns</code>).</li>
+        <li>Coluna <code>imagem</code>: cole o link de compartilhamento do Google Drive da foto (Drive → botão direito → Compartilhar → Copiar link, com acesso "Qualquer pessoa com o link"). O site converte sozinho.</li>
+        <li>Preencha <code>data</code> (AAAA-MM-DD), <code>titulo</code>, <code>local</code> e <code>tags</code> (separadas por vírgula).</li>
+        <li>Deixe <code>foto_id</code> único (ex: <code>casamento-joao-05</code>).</li>
+      </ol>
+    </div>
+
+    <div class="admin-card">
+      <h2>Criar um álbum novo</h2>
+      <p class="admin-sub">Na aba <code>Albuns</code>, uma linha por álbum.</p>
+      <ol class="admin-steps">
+        <li><code>album_id</code>: um identificador único, sem espaço ou acento (ex: <code>casamento-joao</code>).</li>
+        <li><code>album_pai</code>: deixe vazio se for um álbum principal, ou coloque o id de outro álbum pra criar álbum dentro de álbum.</li>
+        <li><code>categoria</code>: precisa bater com um id da aba <code>Categorias</code>.</li>
+        <li><code>titulo</code>, <code>subtitulo</code> (opcional) e <code>capa</code> (link do Drive, igual às fotos).</li>
+      </ol>
+    </div>
+
+    <div class="admin-card">
+      <h2>Textos e contato</h2>
+      <p class="admin-sub">Na aba <code>Config</code>, uma linha por campo (colunas <code>chave</code> / <code>valor</code>).</p>
+      <ol class="admin-steps">
+        <li><code>sobre_mim</code>: o texto da seção "Sobre mim".</li>
+        <li><code>instagram</code> e <code>email</code>: o link completo (<code>https://instagram.com/seu_usuario</code>) e o e-mail.</li>
+        <li><code>whatsapp</code>: só o número com DDI e DDD (ex: <code>5535999999999</code>) ou um link <code>wa.me</code> completo.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== BARRA INFERIOR (SÓ CELULAR) ===================== -->
+<nav class="mobile-tabbar" id="mobileTabbar">
+  <a href="#inicio" class="mobile-tabbar__item" data-tab="inicio">
+    <span class="mobile-tabbar__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/></svg></span>
+    Início
+  </a>
+  <a href="#mural" class="mobile-tabbar__item" data-tab="mural">
+    <span class="mobile-tabbar__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+    Álbuns
+  </a>
+  <a href="#tempo" class="mobile-tabbar__item" data-tab="tempo">
+    <span class="mobile-tabbar__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+    Tempo
+  </a>
+  <a href="#sobre" class="mobile-tabbar__item" data-tab="sobre">
+    <span class="mobile-tabbar__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>
+    Sobre
+  </a>
+</nav>
+
+<!-- ===================== TEMPLATE: ícone aperture (SVG reutilizável) ===================== -->
+<template id="apertureTpl">
+  <svg class="aperture" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <g>
+      <polygon class="blade" points="50,50 50,4 78,16"/>
+      <polygon class="blade" points="50,50 96,22 96,54"/>
+      <polygon class="blade" points="50,50 96,54 74,90"/>
+      <polygon class="blade" points="50,50 74,90 42,96"/>
+      <polygon class="blade" points="50,50 42,96 6,74"/>
+      <polygon class="blade" points="50,50 6,74 4,40"/>
+      <polygon class="blade" points="50,50 4,40 28,8"/>
+    </g>
+  </svg>
+</template>
+
+<script src="js/data.js"></script>
+</body>
+</html>

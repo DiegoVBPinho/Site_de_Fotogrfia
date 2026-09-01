@@ -1,0 +1,45 @@
+/* Estende style.css com o painel "Como atualizar o site" */
+
+.admin-wrap{ max-width: 780px; margin: 0 auto; padding: 6rem 5vw 6rem; }
+.admin-header{ margin-bottom: 3rem; }
+.admin-header img{ height: 34px; margin-bottom: 2rem; }
+.admin-note{
+  background: var(--navy-light);
+  border-left: 3px solid var(--orange);
+  padding: 1.1rem 1.4rem;
+  border-radius: 2px;
+  font-size: .92rem;
+  color: rgba(234,233,232,.85);
+  margin-bottom: 1rem;
+}
+.admin-note b{ color: var(--orange); }
+.admin-note code, .admin-card code{
+  background: rgba(234,233,232,.1);
+  padding: .1em .4em;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: .88em;
+}
+
+.admin-card{
+  background: var(--navy-light);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 2.4rem;
+}
+.admin-card h2{ font-family: var(--font-display); font-size: 1.4rem; margin-bottom: .3rem; }
+.admin-card .admin-sub{ color: rgba(234,233,232,.6); font-size: .88rem; margin-bottom: 1.6rem; }
+
+.admin-steps{ counter-reset: step; margin-top: .8rem; }
+.admin-steps li{
+  counter-increment: step; position:relative; padding-left: 2rem; margin-bottom: .9rem;
+  font-size: .92rem; color: rgba(234,233,232,.85); line-height: 1.5;
+}
+.admin-steps li::before{
+  content: counter(step); position:absolute; left:0; top:0;
+  width: 1.4rem; height:1.4rem; border-radius:50%; background: var(--orange); color: var(--navy-deep);
+  font-family: var(--font-mono); font-size:.72rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.admin-actions{ display:flex; gap: 1rem; flex-wrap:wrap; margin-top: 1rem; }
