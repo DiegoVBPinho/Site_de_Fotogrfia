@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- Diego Victor Fotografia — versão 4. Nessa versão o conteúdo (álbuns,
-     fotos, sobre mim, contato) passou a vir de uma planilha Google em vez
-     de estar fixo no código — ver js/data.js e o painel "Como atualizar
-     o site" no rodapé. Da próxima vez que pedir uma "nova versão", esse
-     número sobe pra 5, e assim por diante. -->
+<!-- Diego Victor Fotografia — versão 5. Redesign completo: visual escuro e
+     cinematográfico, com bastante animação de hover e um elemento no HERO
+     que segue o cursor (câmera/viewfinder trocando de foto conforme o
+     mouse se move). Os dados continuam vindo da planilha Google (js/data.js,
+     inalterado) — só a camada visual/interação foi refeita. -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -12,36 +12,54 @@
 <meta name="description" content="Fotografia e videografia em Santa Rita do Sapucaí — eventos, shows e retratos.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&family=Inter:wght@400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
+
+<!-- cursor autoral (some sozinho em touch — ver JS) -->
+<div class="cursor" id="cursor"><span class="cursor__dot"></span><span class="cursor__ring"></span></div>
 
 <!-- ===================== NAV ===================== -->
 <nav class="nav" id="nav">
   <a href="#inicio" class="nav__mark"><img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia"></a>
   <button class="nav__toggle" id="navToggle" aria-label="Abrir menu"><span></span></button>
   <ul class="nav__links" id="navLinks">
-    <li><a href="#mural">Álbuns</a></li>
-    <li><a href="#tempo">Linha do Tempo</a></li>
-    <li><a href="#sobre">Sobre mim</a></li>
-    <li><a href="#contato">Contato</a></li>
+    <li><a href="#mural" data-hover>Álbuns</a></li>
+    <li><a href="#tempo" data-hover>Linha do Tempo</a></li>
+    <li><a href="#sobre" data-hover>Sobre mim</a></li>
+    <li><a href="#contato" data-hover>Contato</a></li>
   </ul>
 </nav>
 
 <!-- ===================== HERO ===================== -->
 <header class="hero" id="inicio">
-  <div class="hero__mosaic" id="heroMosaic"></div>
+  <div class="hero__bg" id="heroBg"></div>
+  <div class="hero__vignette"></div>
+  <div class="hero__grain"></div>
+
   <div class="hero__content">
-    <div class="hero__logo-wrap">
+    <p class="hero__kicker reveal">Santa Rita do Sapucaí &amp; região</p>
+    <div class="hero__logo-wrap reveal">
       <img class="hero__logo" src="images/brand/logo-color-transparent.png" alt="Diego Victor Fotografia">
     </div>
-    <div class="hero__actions">
-      <a href="#mural" class="btn btn--primary"><span class="aperture"></span> Ver álbuns</a>
+    <div class="hero__actions reveal">
+      <a href="#mural" class="btn btn--primary" data-hover data-magnetic><span class="aperture"></span> Ver álbuns</a>
     </div>
   </div>
-  <div class="hero__scroll">
+
+  <!-- segue o cursor dentro do hero — troca de foto conforme o mouse anda -->
+  <div class="viewfinder" id="viewfinder">
+    <span class="viewfinder__corner viewfinder__corner--tl"></span>
+    <span class="viewfinder__corner viewfinder__corner--tr"></span>
+    <span class="viewfinder__corner viewfinder__corner--bl"></span>
+    <span class="viewfinder__corner viewfinder__corner--br"></span>
+    <div class="viewfinder__frame"><img id="viewfinderImg" src="" alt=""></div>
+    <span class="viewfinder__label" id="viewfinderLabel"></span>
+  </div>
+
+  <div class="hero__scroll reveal">
     role para baixo
     <span class="hero__scroll-arrow">
       <svg viewBox="0 0 24 24"><path d="M4 8 L12 16 L20 8"/></svg>
@@ -60,16 +78,16 @@
   <div class="search-bar reveal">
     <span class="aperture"></span>
     <input type="text" id="searchInput" placeholder="Buscar por tag, evento ou local...">
-    <button class="search-bar__clear" id="searchClear" style="display:none;">limpar ✕</button>
+    <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
   </div>
 
   <div class="filters reveal" id="filters"></div>
 
-  <div class="corkboard reveal">
+  <div class="board reveal">
     <div class="breadcrumb" id="breadcrumb"></div>
     <div id="folderZone"></div>
     <p class="mural-divider" id="photosDividerLabel" style="display:none;">Fotos deste álbum</p>
-    <div class="polaroid-grid" id="muralGrid"></div>
+    <div class="card-grid" id="muralGrid"></div>
   </div>
 </section>
 
@@ -86,8 +104,11 @@
 <!-- ===================== SOBRE MIM ===================== -->
 <section class="section" id="sobre">
   <div class="sobre reveal">
-    <div class="sobre__portrait"><img src="images/brand/eu.jpg" alt="Diego Victor"></div>
-    <div>
+    <div class="sobre__portrait">
+      <img src="images/brand/eu.jpg" alt="Diego Victor">
+      <span class="sobre__frame"></span>
+    </div>
+    <div class="sobre__copy">
       <p class="eyebrow">Quem faz</p>
       <h2 class="section__title" style="margin-bottom:1.4rem;">Sobre mim</h2>
       <p class="sobre__text" id="sobreTexto"></p>
@@ -100,26 +121,26 @@
   <div class="footer__top">
     <div>
       <p class="eyebrow" style="margin-bottom:.5rem;">Contato</p>
-      <p style="font-family: var(--font-display); font-weight:700; font-size:1.2rem;">Vamos conversar sobre seu evento ou projeto</p>
+      <p class="footer__headline">Vamos conversar sobre<br>seu evento ou projeto</p>
     </div>
     <ul class="footer__socials">
-      <li><a href="#" id="socialInstagram" title="Configure na aba Config da planilha">Instagram</a></li>
-      <li><a href="#" id="socialWhatsapp" title="Configure na aba Config da planilha">WhatsApp</a></li>
-      <li><a href="#" id="socialEmail" title="Configure na aba Config da planilha">E-mail</a></li>
+      <li><a href="#" id="socialInstagram" data-hover title="Configure na aba Config da planilha">Instagram</a></li>
+      <li><a href="#" id="socialWhatsapp" data-hover title="Configure na aba Config da planilha">WhatsApp</a></li>
+      <li><a href="#" id="socialEmail" data-hover title="Configure na aba Config da planilha">E-mail</a></li>
     </ul>
   </div>
   <img class="footer__signature" src="images/brand/assinatura-white-transparent.png" alt="Assinatura Diego Victor">
   <div class="footer__bottom">
     <p class="footer__meta">© Diego Victor Fotografia</p>
-    <button class="footer__admin-link" id="openAdminBtn">Como atualizar o site</button>
+    <button class="footer__admin-link" id="openAdminBtn" data-hover>Como atualizar o site</button>
   </div>
 </footer>
 
 <!-- ===================== LIGHTBOX ===================== -->
 <div class="lightbox" id="lightbox">
-  <button class="lightbox__close" id="lbClose" aria-label="Fechar">✕</button>
-  <button class="lightbox__prev" id="lbPrev" aria-label="Anterior">‹</button>
-  <button class="lightbox__next" id="lbNext" aria-label="Próxima">›</button>
+  <button class="lightbox__close" id="lbClose" aria-label="Fechar" data-hover>✕</button>
+  <button class="lightbox__prev" id="lbPrev" aria-label="Anterior" data-hover>‹</button>
+  <button class="lightbox__next" id="lbNext" aria-label="Próxima" data-hover>›</button>
   <div class="lightbox__stage" id="lbStage">
     <div class="lightbox__img-wrap" id="lbImgWrap">
       <img id="lbImg" src="" alt="">
@@ -141,7 +162,7 @@
 
 <!-- ===================== COMO ATUALIZAR O SITE ===================== -->
 <div class="admin-overlay" id="adminOverlay">
-  <button class="admin-overlay__close" id="closeAdminBtn" aria-label="Fechar guia">✕</button>
+  <button class="admin-overlay__close" id="closeAdminBtn" aria-label="Fechar guia" data-hover>✕</button>
   <div class="admin-wrap">
     <div class="admin-header">
       <img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia">
@@ -156,7 +177,7 @@
     </p>
 
     <div class="admin-actions" style="margin-bottom: 2.4rem;">
-      <a class="btn btn--primary" id="openSheetBtn" href="#" target="_blank" rel="noopener"><span class="aperture"></span> Abrir a planilha</a>
+      <a class="btn btn--primary" id="openSheetBtn" href="#" target="_blank" rel="noopener" data-hover><span class="aperture"></span> Abrir a planilha</a>
     </div>
 
     <div class="admin-card">

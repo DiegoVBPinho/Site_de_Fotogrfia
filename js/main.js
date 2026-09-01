@@ -4,9 +4,8 @@
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-// respeita quem pediu menos movimento no sistema — desliga parallax e
-// scroll-scrub (os fades/transições normais já são neutralizados via CSS)
 const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const HAS_FINE_POINTER = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
@@ -19,20 +18,14 @@ function formatDateLong(iso){
   return `${parseInt(d,10)} de ${MESES[parseInt(m,10)-1]} de ${y}`;
 }
 const MESES_ABREV = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-function formatMonthYear(iso){
-  const [y, m] = iso.split("-");
-  return `${MESES_ABREV[parseInt(m, 10) - 1]}/${y}`;
-}
-// "MAIO 2026" — usado como título de cada grupo da linha do tempo
 function formatMonthYearFull(iso){
   const [y, m] = iso.split("-");
   return `${MESES[parseInt(m, 10) - 1].toUpperCase()} ${y}`;
 }
-function formatDayOnly(iso){
-  const [, , d] = iso.split("-");
-  return parseInt(d, 10);
-}
 
+// ============================================================
+// Dados — navegação da árvore de álbuns (puro, sem DOM)
+// ============================================================
 function getAlbum(id){ return ALBUMS.find(a => a.id === id); }
 function children(parentId){ return ALBUMS.filter(a => a.parent === parentId); }
 function albumPhotos(id){ return PHOTOS.filter(p => p.album === id); }
@@ -50,17 +43,12 @@ function breadcrumbFor(albumId){
   }
   return chain;
 }
-// data do álbum = data da foto mais antiga que pertence DIRETAMENTE a ele
 function albumOwnDate(id){
   const photos = albumPhotos(id);
   if (!photos.length) return null;
   return photos.reduce((min, p) => (p.data < min ? p.data : min), photos[0].data);
 }
 function catLabel(id){ return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
-
-// Data "efetiva" de um álbum: a dele mesma, ou (se for uma pastinha sem
-// foto própria) a data mais antiga entre todos os descendentes — assim dá
-// pra ordenar até álbuns-pai que não têm foto direta, só sub-álbuns.
 function albumEffectiveDate(id){
   const own = albumOwnDate(id);
   if (own) return own;
@@ -68,8 +56,6 @@ function albumEffectiveDate(id){
   if (!recPhotos.length) return null;
   return recPhotos.reduce((min, p) => (p.data < min ? p.data : min), recPhotos[0].data);
 }
-// Ordena álbuns em ordem cronológica: do mais antigo pro mais recente
-// (sem data vai pro final)
 function sortAlbumsByDate(albums){
   return [...albums].sort((a, b) => {
     const da = albumEffectiveDate(a.id), db = albumEffectiveDate(b.id);
@@ -79,55 +65,6 @@ function sortAlbumsByDate(albums){
     return new Date(da) - new Date(db);
   });
 }
-
-// Revela cada foto suavemente ao entrar na tela, com um atraso crescente
-// por card (--stagger) pra aparecerem em cascata em vez de tudo de uma
-// vez — reinicia a cada "leva" de ~8 pra não deixar o final da grade
-// esperando um atraso enorme.
-const polaroidObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting){
-      entry.target.classList.add("in-view");
-      polaroidObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12 });
-function observePolaroids(container){
-  $$(".polaroid", container).forEach((el, i) => {
-    el.style.setProperty("--stagger", (Math.min(i % 8, 7) * 0.07).toFixed(2) + "s");
-    polaroidObserver.observe(el);
-  });
-}
-
-// Injects the reusable aperture SVG into any element with class "aperture" lacking one
-function stampApertures(root = document){
-  const tpl = $("#apertureTpl");
-  $$(".aperture", root).forEach(el => {
-    if (!el.querySelector("svg")) el.appendChild(tpl.content.cloneNode(true));
-  });
-}
-
-// Detecta se cada foto é vertical ou horizontal e aplica a classe certa na
-// moldura (polaroid), pra moldura vertical abraçar foto vertical e moldura
-// horizontal abraçar foto horizontal — em vez de cortar tudo num único formato.
-function applyOrientationClasses(root = document){
-  $$(".polaroid img", root).forEach(img => {
-    const figure = img.closest(".polaroid");
-    if (!figure) return;
-    const classify = () => {
-      if (!img.naturalWidth || !img.naturalHeight) return;
-      const isPortrait = img.naturalHeight > img.naturalWidth;
-      figure.classList.toggle("polaroid--portrait", isPortrait);
-      figure.classList.toggle("polaroid--landscape", !isPortrait);
-    };
-    if (img.complete) classify();
-    else img.addEventListener("load", classify, { once: true });
-  });
-}
-
-// Quando uma categoria só tem UM álbum principal (sem irmãos pra escolher),
-// não faz sentido mostrar a "pastinha" vazia esperando um clique — entra
-// direto no álbum (e continua entrando se ele também só tiver um sub-álbum).
 function resolveSingleAlbumChain(categoryId){
   if (categoryId === "todos") return [];
   const topAlbums = children(null).filter(a => a.categoria === categoryId);
@@ -142,6 +79,194 @@ function resolveSingleAlbumChain(categoryId){
     } else break;
   }
   return chain;
+}
+
+function stampApertures(root = document){
+  const tpl = $("#apertureTpl");
+  $$(".aperture", root).forEach(el => {
+    if (!el.querySelector("svg")) el.appendChild(tpl.content.cloneNode(true));
+  });
+}
+
+// revela cards ao entrar na tela, em cascata
+const cardObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting){
+      entry.target.classList.add("in-view");
+      cardObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+function observeCards(container){
+  $$(".card", container).forEach((el, i) => {
+    el.style.transitionDelay = (Math.min(i % 10, 9) * 0.06).toFixed(2) + "s";
+    cardObserver.observe(el);
+  });
+}
+
+// fotos verticais ganham moldura vertical, horizontais ganham horizontal
+function applyOrientationClasses(root = document){
+  $$(".card--photo img", root).forEach(img => {
+    const card = img.closest(".card");
+    if (!card) return;
+    const classify = () => {
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const isPortrait = img.naturalHeight > img.naturalWidth;
+      card.classList.toggle("card--portrait", isPortrait);
+      card.classList.toggle("card--landscape", !isPortrait);
+    };
+    if (img.complete) classify();
+    else img.addEventListener("load", classify, { once: true });
+  });
+}
+
+// ============================================================
+// Cursor autoral
+// ============================================================
+function initCursor(){
+  if (!HAS_FINE_POINTER) return;
+  const cursor = $("#cursor");
+  let x = window.innerWidth / 2, y = window.innerHeight / 2;
+  let cx = x, cy = y;
+  window.addEventListener("mousemove", e => {
+    x = e.clientX; y = e.clientY;
+    cursor.classList.remove("hidden");
+  });
+  document.addEventListener("mouseleave", () => cursor.classList.add("hidden"));
+  const HOVER_SELECTOR = 'a, button, .card, .filter-chip, [data-hover], input, .lightbox__tags span';
+  document.addEventListener("mouseover", e => {
+    if (e.target.closest(HOVER_SELECTOR)) cursor.classList.add("hovering");
+  });
+  document.addEventListener("mouseout", e => {
+    if (e.target.closest(HOVER_SELECTOR) && !e.relatedTarget?.closest?.(HOVER_SELECTOR)) cursor.classList.remove("hovering");
+  });
+  let cursorTicking = false;
+  function tick(){
+    cx += (x - cx) * 0.22; cy += (y - cy) * 0.22;
+    cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
+    if (Math.abs(x - cx) > 0.1 || Math.abs(y - cy) > 0.1){
+      requestAnimationFrame(tick);
+    } else {
+      cursorTicking = false;
+    }
+  }
+  window.addEventListener("mousemove", () => {
+    if (!cursorTicking){ cursorTicking = true; requestAnimationFrame(tick); }
+  });
+}
+
+// ============================================================
+// Botões magnéticos
+// ============================================================
+function initMagnetic(){
+  if (!HAS_FINE_POINTER) return;
+  $$("[data-magnetic]").forEach(el => {
+    el.addEventListener("mousemove", e => {
+      const r = el.getBoundingClientRect();
+      const relX = e.clientX - (r.left + r.width / 2);
+      const relY = e.clientY - (r.top + r.height / 2);
+      el.style.transform = `translate(${relX * 0.35}px, ${relY * 0.45}px)`;
+    });
+    el.addEventListener("mouseleave", () => { el.style.transform = ""; });
+  });
+}
+
+// ============================================================
+// Hero — fundo em crossfade + "viewfinder" que segue o cursor
+// ============================================================
+let heroPool = [];
+
+function checkLandscape(photo){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth >= img.naturalHeight * 1.05 ? photo : null);
+    img.onerror = () => resolve(null);
+    img.src = photo.src;
+  });
+}
+
+async function buildHeroPool(){
+  const shuffled = [...PHOTOS].sort(() => Math.random() - 0.5);
+  const results = await Promise.all(shuffled.slice(0, 60).map(checkLandscape));
+  heroPool = results.filter(Boolean).slice(0, 22);
+  if (!heroPool.length) heroPool = shuffled.slice(0, 10);
+}
+
+function initHeroBg(){
+  const el = $("#heroBg");
+  if (!heroPool.length){ return; }
+  const imgs = heroPool.slice(0, 8).map((p, i) => {
+    const img = document.createElement("img");
+    img.src = p.src; img.alt = p.titulo || "";
+    img.loading = i === 0 ? "eager" : "lazy";
+    el.appendChild(img);
+    return img;
+  });
+  let i = 0;
+  imgs[0].classList.add("is-active");
+  if (imgs.length > 1 && !REDUCE_MOTION){
+    setInterval(() => {
+      imgs[i].classList.remove("is-active");
+      i = (i + 1) % imgs.length;
+      imgs[i].classList.add("is-active");
+    }, 6500);
+  }
+}
+
+function initViewfinder(){
+  if (!HAS_FINE_POINTER || REDUCE_MOTION || !heroPool.length) return;
+  const hero = $("#inicio");
+  const vf = $("#viewfinder");
+  const vfImg = $("#viewfinderImg");
+  const vfLabel = $("#viewfinderLabel");
+
+  let tx = 0, ty = 0, cx = 0, cy = 0, active = false;
+  let lastAdvanceX = 0, lastAdvanceY = 0, idx = 0;
+  const STEP = 130; // px percorridos até trocar de frame
+
+  function showFrame(i){
+    const p = heroPool[i % heroPool.length];
+    vfImg.style.opacity = 0;
+    const img = new Image();
+    img.onload = () => { vfImg.src = p.src; vfImg.alt = p.titulo || ""; vfImg.style.opacity = 1; };
+    img.src = p.src;
+    const album = getAlbum(p.album);
+    vfLabel.textContent = album ? album.titulo : (p.titulo || "");
+  }
+  showFrame(0);
+
+  let ticking = false;
+  function tick(){
+    cx += (tx - cx) * 0.14; cy += (ty - cy) * 0.14;
+    vf.style.transform = `translate3d(${cx + 26}px, ${cy - 90}px, 0)`;
+    if (active || Math.abs(tx - cx) > 0.1 || Math.abs(ty - cy) > 0.1){
+      requestAnimationFrame(tick);
+    } else {
+      ticking = false;
+    }
+  }
+  function ensureTicking(){
+    if (!ticking){ ticking = true; requestAnimationFrame(tick); }
+  }
+
+  hero.addEventListener("mousemove", e => {
+    tx = e.clientX; ty = e.clientY;
+    if (!active){ active = true; cx = tx; cy = ty; vf.classList.add("is-active"); }
+    const dx = tx - lastAdvanceX, dy = ty - lastAdvanceY;
+    if (Math.hypot(dx, dy) > STEP){
+      idx++; showFrame(idx);
+      lastAdvanceX = tx; lastAdvanceY = ty;
+    }
+    ensureTicking();
+  });
+  hero.addEventListener("mouseleave", () => { active = false; vf.classList.remove("is-active"); ensureTicking(); });
+  hero.addEventListener("mouseenter", e => { lastAdvanceX = e.clientX; lastAdvanceY = e.clientY; });
+}
+
+async function initHero(){
+  await buildHeroPool();
+  initHeroBg();
+  initViewfinder();
 }
 
 // ============================================================
@@ -165,90 +290,6 @@ $$("#navLinks a").forEach(a => a.addEventListener("click", () => {
 }));
 
 // ============================================================
-// Hero mosaic — grade de fotos lado a lado, sem nenhuma sobreposta,
-// só com fotos horizontais (verticais destoam da grade e ficam
-// espremidas — melhor deixá-las de fora do mosaico da capa)
-// ============================================================
-function checkOrientation(photo){
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve({ photo, landscape: img.naturalWidth >= img.naturalHeight });
-    img.onerror = () => resolve({ photo, landscape: false });
-    img.src = photo.src;
-  });
-}
-
-// Calcula quantas colunas/linhas cabem no mosaico a partir do tamanho REAL
-// da janela (não um breakpoint fixo) — assim a grade se adapta sozinha
-// tanto trocando de celular pra monitor quanto só redimensionando a
-// janela, sem ficar esticada/quadriculada errado em telas ultra-largas
-// ou bem estreitas. Cada célula mira um tamanho-alvo (menor no celular,
-// pra caber mais fotos pequenas; maior no desktop), e o número de
-// colunas/linhas é só "quantas células desse tamanho cabem aqui".
-function computeHeroGrid(){
-  const w = window.innerWidth, h = window.innerHeight;
-  const mobile = w < 640;
-  const targetCell = mobile ? 95 : 180;
-  const cols = Math.max(mobile ? 3 : 5, Math.min(mobile ? 5 : 12, Math.round(w / targetCell)));
-  const rows = Math.max(mobile ? 6 : 4, Math.min(mobile ? 9 : 7, Math.round(h / targetCell)));
-  return { cols, rows };
-}
-let lastHeroGrid = null;
-
-async function renderHeroMosaic(){
-  const el = $("#heroMosaic");
-  const { cols, rows } = computeHeroGrid();
-  lastHeroGrid = { cols, rows };
-  const cells = cols * rows;
-
-  el.style.setProperty("--hero-cols", cols);
-  el.style.setProperty("--hero-rows", rows);
-
-  const shuffled = [...PHOTOS].sort(() => Math.random() - 0.5);
-  const landscapePool = [];
-  const BATCH = Math.max(cells * 2, 30);
-  let i = 0;
-  while (landscapePool.length < cells && i < shuffled.length){
-    const batch = shuffled.slice(i, i + BATCH);
-    i += BATCH;
-    const results = await Promise.all(batch.map(checkOrientation));
-    results.forEach(r => { if (r.landscape) landscapePool.push(r.photo); });
-  }
-  if (!landscapePool.length) return;
-
-  const pool = [];
-  while (pool.length < cells) pool.push(...landscapePool);
-  pool.length = cells;
-
-  // centro da grade (em coordenadas de linha/coluna) — cada foto calcula
-  // sua distância até esse centro pra entrar em onda, do meio pras bordas,
-  // feito uma gota d'água caindo n'água. Início quase junto com a logo
-  // (sem espera morta) e espalhamento rápido — "instantâneo" no começo,
-  // suave só no jeito que cada foto se movimenta, não na demora.
-  const RIPPLE_START = 0.05;
-  const RIPPLE_SPREAD = 0.7;
-  const centerRow = (rows - 1) / 2;
-  const centerCol = (cols - 1) / 2;
-  const maxDist = Math.hypot(centerRow, centerCol) || 1;
-
-  el.innerHTML = pool.map((p, idx) => {
-    const row = Math.floor(idx / cols);
-    const col = idx % cols;
-    const dist = Math.hypot(row - centerRow, col - centerCol) / maxDist; // 0 (centro) a 1 (cantos)
-    const r = (Math.random() * 6 - 3).toFixed(1);
-    const delay = (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.08).toFixed(2);
-    const floatDur = (5 + Math.random() * 4).toFixed(1);
-    // sem "lazy" aqui: essas fotos já aparecem na primeira dobra da
-    // página, então "lazy" só atrasava o carregamento à toa
-    return `<div class="hero__tile" style="--d:${delay}s;">
-      <div class="hero__tile-inner" style="--r:${r}deg; --fd:${floatDur}s;">
-        <img src="${p.src}" alt="${p.titulo}">
-      </div>
-    </div>`;
-  }).join("");
-}
-
-// ============================================================
 // Mural (álbuns aninhados)
 // ============================================================
 const filtersEl = $("#filters");
@@ -261,12 +302,8 @@ const searchClear = $("#searchClear");
 
 let activeCategory = "todos";
 let searchQuery = "";
-let navStack = []; // array of album ids representing the current drill-down path
+let navStack = [];
 
-// Categoria de álbum normalmente resolve pelo campo `categoria` do álbum-pai,
-// mas algumas categorias (ex.: Esporte) não têm mais um álbum-topo próprio —
-// as fotos viraram sub-álbum dentro de outro assunto (Festa de Santa Rita).
-// Nesses casos a categoria é só a TAG da foto mesmo, então cai pra tag.
 function photoMatchesCategory(p, categoryId){
   if (categoryId === "todos") return true;
   const album = getAlbum(p.album);
@@ -303,10 +340,6 @@ function renderFilters(){
 }
 
 function renderBreadcrumb(){
-  // no celular o breadcrumb normalmente fica escondido (a navegação lá é
-  // por categoria, não por pastinha) — MAS se veio um clique específico
-  // (ex.: card da linha do tempo) que empilhou um álbum em navStack,
-  // precisa aparecer, senão não tem como voltar pro mural geral
   if (isMobileView() && !searchQuery && !navStack.length){
     breadcrumbEl.innerHTML = "";
     return;
@@ -337,7 +370,6 @@ function renderMural(){
   folderZone.innerHTML = "";
   photosDividerLabel.style.display = "none";
 
-  // --- search mode: flat results across every photo ---
   if (searchQuery){
     searchClear.style.display = "inline";
     const items = PHOTOS.filter(p =>
@@ -349,25 +381,16 @@ function renderMural(){
       return;
     }
     muralGrid.innerHTML = items.map(p => photoCardHTML(p)).join("");
-    observePolaroids(muralGrid);
+    observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
-    $$(".polaroid", muralGrid).forEach(el => {
+    $$(".card", muralGrid).forEach(el => {
       el.addEventListener("click", () => openLightbox(items, items.findIndex(p => p.id === el.dataset.id)));
     });
-    refreshParallaxTargets();
     return;
   }
   searchClear.style.display = "none";
 
-  // --- celular: navegar por álbum fica confuso na tela pequena — mostra as
-  //     fotos da categoria agrupadas por álbum, no máximo 3 de cada vez,
-  //     com um "ver mais" pra quem quiser o álbum inteiro ---
   if (isMobileView()){
-    // se veio de um clique específico (card da linha do tempo, ou álbum
-    // dentro de outro álbum) o navStack aponta pro álbum exato — mostra
-    // só as fotos dele (recursivo, cobre sub-álbuns), não a categoria
-    // inteira misturada. Sem isso, clicar "Ver álbum" caía num apanhado
-    // aleatório de tudo daquela categoria em vez do álbum pedido.
     const currentParent = navStack.length ? navStack[navStack.length - 1] : null;
     const items = currentParent
       ? albumPhotosRecursive(currentParent)
@@ -397,66 +420,51 @@ function renderMural(){
         <div class="mobile-album-block" data-group="${g.album ? g.album.id : ""}">
           ${showTitles && g.album ? `<p class="mobile-album-block__title">${g.album.titulo}${g.album.subtitulo ? " — " + g.album.subtitulo : ""}</p>` : ""}
           <div class="mobile-album-block__frames">${shown.map(p => photoCardHTML(p)).join("")}</div>
-          ${rest > 0 ? `<button class="mobile-album-block__more" data-group="${g.album ? g.album.id : ""}">Ver mais ${rest} foto${rest === 1 ? "" : "s"} <span class="aperture"></span></button>` : ""}
+          ${rest > 0 ? `<button class="mobile-album-block__more" data-group="${g.album ? g.album.id : ""}" data-hover>Ver mais ${rest} foto${rest === 1 ? "" : "s"} <span class="aperture"></span></button>` : ""}
         </div>`;
     }).join("");
     stampApertures(muralGrid);
-    observePolaroids(muralGrid);
+    observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
 
     $$(".mobile-album-block", muralGrid).forEach(block => {
       const g = groups.find(x => (x.album ? x.album.id : "") === block.dataset.group);
       if (!g) return;
-      $$(".polaroid", block).forEach(el => {
+      $$(".card", block).forEach(el => {
         el.addEventListener("click", () => openLightbox(g.photos, g.photos.findIndex(p => p.id === el.dataset.id)));
       });
       const moreBtn = $(".mobile-album-block__more", block);
       if (moreBtn) moreBtn.addEventListener("click", () => openLightbox(g.photos, Math.min(MOBILE_PREVIEW_LIMIT, g.photos.length - 1)));
     });
-    refreshParallaxTargets();
     return;
   }
 
-  // --- normal browsing mode (desktop) ---
   const currentParent = navStack.length ? navStack[navStack.length - 1] : null;
   let childAlbums = children(currentParent);
   if (currentParent === null){
     childAlbums = childAlbums.filter(a => activeCategory === "todos" || a.categoria === activeCategory);
   }
   childAlbums = sortAlbumsByDate(childAlbums);
-  // Categorias sem álbum-topo próprio (ex.: Esporte, que virou sub-álbum
-  // dentro de Festa de Santa Rita) caem aqui: sem pastinha pra abrir, mostra
-  // direto as fotos que têm a tag da categoria.
   const ownPhotos = currentParent
     ? albumPhotos(currentParent)
     : (activeCategory !== "todos" && !childAlbums.length
         ? PHOTOS.filter(p => photoMatchesCategory(p, activeCategory))
         : []);
 
-  // sub-álbuns ("pastinhas") no topo
   if (childAlbums.length){
     folderZone.innerHTML = `
       ${ownPhotos.length ? `<p class="mural-divider">Álbuns dentro deste álbum</p>` : ""}
-      <div class="polaroid-grid polaroid-grid--albums" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
+      <div class="card-grid card-grid--albums" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
         ${childAlbums.map(a => albumCardHTML(a)).join("")}
       </div>
     `;
     stampApertures(folderZone);
-    // as capas de álbum usam a mesma classe .polaroid das fotos soltas —
-    // por isso também precisam ser "observadas" pra ganhar a classe
-    // in-view e deixar de ficar com opacity:0 pra sempre (bug corrigido:
-    // antes só o muralGrid era observado, o folderZone nunca)
-    observePolaroids(folderZone);
-    // capas de álbum NÃO variam moldura por orientação — capa é sempre
-    // horizontal (força consistência visual na grade de álbuns)
-    $$(".polaroid", folderZone).forEach(el => {
+    observeCards(folderZone);
+    $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
         renderMural();
-        // rola até o quadro (breadcrumb + sub-álbuns/fotos), não até o
-        // topo da seção — senão só mostra o título "Mural de Álbuns" e o
-        // usuário tem que rolar mais pra ver o que realmente abriu
-        $(".corkboard").scrollIntoView({ behavior: "smooth", block: "start" });
+        $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
   }
@@ -464,9 +472,9 @@ function renderMural(){
   if (ownPhotos.length){
     if (childAlbums.length) photosDividerLabel.style.display = "inline-block";
     muralGrid.innerHTML = ownPhotos.map(p => photoCardHTML(p)).join("");
-    observePolaroids(muralGrid);
+    observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
-    $$(".polaroid", muralGrid).forEach(el => {
+    $$(".card", muralGrid).forEach(el => {
       el.addEventListener("click", () => openLightbox(ownPhotos, ownPhotos.findIndex(p => p.id === el.dataset.id)));
     });
   } else if (!childAlbums.length){
@@ -476,7 +484,6 @@ function renderMural(){
   } else {
     muralGrid.innerHTML = "";
   }
-  refreshParallaxTargets();
 }
 
 function albumCardHTML(a){
@@ -485,27 +492,22 @@ function albumCardHTML(a){
   const count = isFolder ? kids.length : albumPhotos(a.id).length;
   const countLabel = isFolder ? `${count} álbum${count === 1 ? "" : "s"}` : `${count} foto${count === 1 ? "" : "s"}`;
   return `
-    <figure class="polaroid polaroid--album ${isFolder ? "polaroid--folder" : ""}" data-id="${a.id}">
-      <span class="polaroid__pin"></span>
-      <span class="polaroid__aperture aperture"></span>
-      <span class="polaroid__count">${countLabel}</span>
-      <div class="polaroid__frame"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
-      <figcaption class="polaroid__cap">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</figcaption>
+    <figure class="card" data-id="${a.id}" data-hover>
+      <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
+      <div class="card__overlay">
+        <span class="card__count">${countLabel}</span>
+        <h3 class="card__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
+      </div>
     </figure>
   `;
 }
 
 function photoCardHTML(p){
-  // "legenda" é usada em fotos que vieram de um sub-álbum que foi
-  // incorporado ao álbum-pai (ex.: sub-álbum só com fotos verticais,
-  // que não podia ter capa) — mantém o nome do sub-álbum antigo visível
-  // na legenda da foto, em vez de perder essa informação.
-  const capText = p.legenda ? `${formatDateShort(p.data)} — ${p.legenda}` : formatDateShort(p.data);
+  const dateText = p.legenda ? `${formatDateShort(p.data)} — ${p.legenda}` : formatDateShort(p.data);
   return `
-    <figure class="polaroid" data-id="${p.id}">
-      <span class="polaroid__pin"></span>
-      <div class="polaroid__frame"><img src="${p.src}" alt="${p.titulo}" loading="lazy"></div>
-      <figcaption class="polaroid__cap">${capText}</figcaption>
+    <figure class="card card--photo" data-id="${p.id}" data-hover>
+      <div class="card__media"><img src="${p.src}" alt="${p.titulo}" loading="lazy"></div>
+      <div class="card__overlay"><span class="card__date">${dateText}</span></div>
     </figure>
   `;
 }
@@ -520,15 +522,12 @@ searchClear.addEventListener("click", () => {
   renderMural();
 });
 
-
 // ============================================================
-// Linha do tempo — compacta, revela mais aos poucos
+// Linha do tempo
 // ============================================================
 let timelineRevealCount = 1;
 const TIMELINE_STEP = 3;
 
-// mesmo princípio do reveal escalonado das fotos, aplicado aos cards
-// da linha do tempo — cada um aparece um pouco depois do anterior
 const timelineObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting){
@@ -540,12 +539,6 @@ const timelineObserver = new IntersectionObserver((entries) => {
 
 function renderTimeline(){
   const el = $("#timeline");
-  // retratos ficam de fora da linha do tempo — são ensaios avulsos, não
-  // fazem parte da cronologia de eventos/coberturas
-  // só álbuns de primeiro nível (sem sub-álbum) — fica mais limpo.
-  // usa a data "efetiva" (própria, ou a mais antiga entre os
-  // descendentes) pra álbuns-pasta como "Drone" e "Festa de Santa Rita"
-  // continuarem aparecendo mesmo sem foto própria direta.
   const dated = ALBUMS
     .filter(a => a.categoria !== "retratos" && a.parent === null)
     .map(a => ({ album: a, date: albumEffectiveDate(a.id) }))
@@ -554,12 +547,10 @@ function renderTimeline(){
 
   const visible = dated.slice(0, timelineRevealCount);
 
-  // agrupa por mês/ano (ex.: "MAIO 2026") — cada grupo vira um grid,
-  // em vez de uma coluna única deixando espaço vazio do lado direito
   const groups = [];
   const byMonth = new Map();
   visible.forEach(({ album: a, date }) => {
-    const key = date.slice(0, 7); // "2026-05"
+    const key = date.slice(0, 7);
     if (!byMonth.has(key)){
       byMonth.set(key, { label: formatMonthYearFull(date), items: [] });
       groups.push(byMonth.get(key));
@@ -572,13 +563,11 @@ function renderTimeline(){
       <p class="timeline-group__label">${g.label}</p>
       <div class="timeline-group__grid">
         ${g.items.map(({ album: a, date }) => {
-          // recursivo: álbuns-pasta (Drone, Festa de Santa Rita) não têm
-          // foto própria direta, só através dos sub-álbuns
           const kidsCount = children(a.id).length;
           const count = albumPhotosRecursive(a.id).length;
           return `
             <div class="timeline__item" data-id="${a.id}">
-              <div class="timeline__card">
+              <div class="timeline__card" data-hover>
                 <div class="timeline__thumb"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
                 <div class="timeline__body">
                   <p class="timeline__date">${formatDateShort(date)}</p>
@@ -596,16 +585,16 @@ function renderTimeline(){
   `).join("");
   stampApertures(el);
   $$(".timeline__item", el).forEach((item, i) => {
-    item.style.setProperty("--stagger", (Math.min(i, 6) * 0.09).toFixed(2) + "s");
+    item.style.transitionDelay = (Math.min(i, 6) * 0.08).toFixed(2) + "s";
     timelineObserver.observe(item);
   });
 
   const buttons = [];
   if (dated.length > visible.length){
-    buttons.push(`<button class="timeline__more" id="timelineMore">Mostrar mais</button>`);
+    buttons.push(`<button class="timeline__more" id="timelineMore" data-hover>Mostrar mais</button>`);
   }
   if (timelineRevealCount > 1){
-    buttons.push(`<button class="timeline__more timeline__more--less" id="timelineLess">Mostrar menos</button>`);
+    buttons.push(`<button class="timeline__more timeline__more--less" id="timelineLess" data-hover>Mostrar menos</button>`);
   }
   if (buttons.length){
     el.insertAdjacentHTML("beforeend", `<div class="timeline__actions">${buttons.join("")}</div>`);
@@ -627,9 +616,7 @@ function renderTimeline(){
       navStack = breadcrumbFor(item.dataset.id).map(a => a.id);
       searchQuery = ""; searchInput.value = "";
       renderMural();
-      // mesma correção: mostra direto o breadcrumb + sub-álbuns/fotos do
-      // álbum clicado, não o topo da seção (título "Mural de Álbuns")
-      $(".corkboard").scrollIntoView({ behavior: "smooth", block: "start" });
+      $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 }
@@ -662,8 +649,6 @@ function updateLightbox(){
   const p = lbItems[lbIndex];
   lbImgWrap.classList.remove("zoomed");
   lbStage.classList.remove("zoomed");
-  // troca a foto com um pequeno cross-fade em vez de um corte seco —
-  // some, troca o src, e volta a aparecer assim que a nova carregar
   lbImg.style.opacity = "0";
   const swapSrc = () => {
     lbImg.src = p.src;
@@ -691,7 +676,7 @@ function updateLightbox(){
       searchQuery = "";
       searchInput.value = "";
       renderMural();
-      $(".corkboard").scrollIntoView({ behavior: "smooth" });
+      $(".board").scrollIntoView({ behavior: "smooth" });
     });
   });
 
@@ -705,15 +690,13 @@ function updateLightbox(){
       searchQuery = chip.dataset.tag;
       renderFilters();
       renderMural();
-      $(".corkboard").scrollIntoView({ behavior: "smooth" });
+      $(".board").scrollIntoView({ behavior: "smooth" });
     });
   });
 }
 
 lbImgWrap.addEventListener("click", () => {
   lbImgWrap.classList.toggle("zoomed");
-  // sem isso, o touch-action do palco (que reserva o arraste horizontal
-  // pra passar de foto) impedia arrastar a foto ampliada na vertical
   lbStage.classList.toggle("zoomed", lbImgWrap.classList.contains("zoomed"));
 });
 
@@ -735,7 +718,6 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") $("#lbNext").click();
 });
 
-// swipe pra navegar (mobile)
 let touchStartX = null, touchStartY = null;
 lbStage.addEventListener("touchstart", e => {
   touchStartX = e.touches[0].clientX;
@@ -750,34 +732,6 @@ lbStage.addEventListener("touchend", e => {
   }
   touchStartX = null; touchStartY = null;
 }, { passive: true });
-
-// ============================================================
-// Parallax sutil nas fotos da grade — a imagem desliza um pouco mais
-// devagar que o card conforme rola a página, dando uma sensação de
-// profundidade sem atrapalhar a leitura. Só no desktop (no celular a
-// grade é outra e o ganho visual não compensa o custo).
-// ============================================================
-let parallaxTargets = [];
-function refreshParallaxTargets(){
-  // capas de álbum ficam de fora do parallax: a foto lá dentro usa
-  // "contain" (não pode ter nem um pixel cortado), então não tem a
-  // margem extra necessária pra deslizar sem revelar borda vazia
-  parallaxTargets = (REDUCE_MOTION || isMobileView()) ? [] : $$(".polaroid:not(.polaroid--album) .polaroid__frame img");
-}
-function tickGridParallax(){
-  if (parallaxTargets.length){
-    const vh = window.innerHeight;
-    parallaxTargets.forEach(img => {
-      const rect = img.getBoundingClientRect();
-      if (rect.bottom < -200 || rect.top > vh + 200) return; // fora da tela, não vale o custo
-      const center = rect.top + rect.height / 2;
-      const dist = Math.max(-1, Math.min(1, (center - vh / 2) / vh));
-      img.style.transform = `translateY(${(dist * 16).toFixed(1)}px)`;
-    });
-  }
-  requestAnimationFrame(tickGridParallax);
-}
-requestAnimationFrame(tickGridParallax);
 
 // ============================================================
 // Sobre mim
@@ -806,7 +760,7 @@ Object.entries(socialLinks).forEach(([sel, href]) => {
 });
 
 // ============================================================
-// Gerenciador embutido — abrir/fechar
+// Guia "Como atualizar o site" — abrir/fechar
 // ============================================================
 const adminOverlay = $("#adminOverlay");
 $("#openAdminBtn").addEventListener("click", () => {
@@ -819,7 +773,7 @@ $("#closeAdminBtn").addEventListener("click", () => {
 });
 
 // ============================================================
-// Barra inferior (celular) — destaca a aba da seção visível
+// Barra inferior (celular)
 // ============================================================
 const tabbarItems = $$(".mobile-tabbar__item");
 if (tabbarItems.length){
@@ -840,8 +794,7 @@ if (tabbarItems.length){
 }
 
 // ============================================================
-// Recalcula ao redimensionar (ex: girar o celular) — só quando
-// cruza a fronteira mobile/desktop, pra não re-renderizar à toa
+// Recalcula ao redimensionar
 // ============================================================
 let lastWasMobile = isMobileView();
 let resizeTimer = null;
@@ -852,14 +805,6 @@ window.addEventListener("resize", () => {
     if (nowMobile !== lastWasMobile){
       lastWasMobile = nowMobile;
       renderMural();
-    }
-    // troca de monitor, janela redimensionada, celular girado — o
-    // mosaico do hero recalcula o grid (cols/rows) e só re-renderiza
-    // de fato se o formato realmente mudou, pra não replicar a animação
-    // de entrada à toa em tremidas pequenas (barra de endereço sumindo etc.)
-    const nextGrid = computeHeroGrid();
-    if (!lastHeroGrid || nextGrid.cols !== lastHeroGrid.cols || nextGrid.rows !== lastHeroGrid.rows){
-      renderHeroMosaic();
     }
   }, 200);
 });
@@ -882,7 +827,9 @@ function observeReveals(){ $$(".reveal").forEach(el => io.observe(el)); }
 // Init
 // ============================================================
 stampApertures(document);
-renderHeroMosaic();
+initCursor();
+initMagnetic();
+initHero();
 renderFilters();
 renderMural();
 renderTimeline();
