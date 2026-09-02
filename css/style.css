@@ -385,14 +385,13 @@ ul{ list-style:none; margin:0; padding:0; }
 .card--photo.card--landscape{ aspect-ratio: 4 / 3; }
 .card--photo.card--portrait{ aspect-ratio: 3 / 4; }
 
-/* grade de FOTOS (retrato + paisagem misturados) precisa de masonry de
-   verdade — grid comum estica a linha inteira pra caber a foto mais alta
-   e deixa buraco embaixo das mais baixas. columns resolve isso: cada
-   coluna empilha do jeito que dá, sem forçar altura de linha */
-.card-grid--photos{
-  display:block; column-width: 300px; column-gap: 1.4rem;
-}
-.card-grid--photos .card{ break-inside: avoid; margin-bottom: 1.4rem; width: 100%; }
+/* grade de FOTOS (retrato + paisagem misturados) — masonry montado em JS
+   (layoutMasonry em main.js). CSS columns sozinho não dava: com poucas
+   fotos ele "balanceava" em menos colunas do que cabia na tela, deixando
+   um buraco enorme do lado em vez de espalhar pela largura toda. */
+.card-grid--photos{ display:block; }
+.masonry-track{ display:flex; align-items:flex-start; gap: 1.4rem; }
+.masonry-col{ display:flex; flex-direction:column; gap: 1.4rem; flex: 1 1 0; min-width: 0; }
 @media (max-width: 560px){ .card-grid--photos{ column-width: 100%; } }
 
 /* ------ mobile: blocos por álbum com "ver mais" ------ */

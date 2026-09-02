@@ -107,6 +107,43 @@ function observeCards(container){
   });
 }
 
+// masonry de verdade via JS — CSS columns sozinho "balanceia" pra menos
+// colunas do que cabe quando tem poucas fotos (ex: álbum com 6 fotos usa
+// só 3 colunas mesmo cabendo 5), deixando buraco enorme do lado. Aqui a
+// gente decide quantas colunas cabem e distribui uma a uma, sempre na
+// coluna mais curta até agora — garante que usa a largura toda.
+const MASONRY_COL_WIDTH = 300, MASONRY_GAP = 22;
+function layoutMasonry(container){
+  const items = $$(".card", container);
+  if (!items.length) return;
+  const width = container.clientWidth || container.parentElement.clientWidth;
+  const cols = Math.max(1, Math.min(items.length, Math.round((width + MASONRY_GAP) / (MASONRY_COL_WIDTH + MASONRY_GAP))));
+
+  const track = document.createElement("div");
+  track.className = "masonry-track";
+  const colEls = Array.from({ length: cols }, () => {
+    const col = document.createElement("div");
+    col.className = "masonry-col";
+    track.appendChild(col);
+    return col;
+  });
+
+  // altura estimada pela proporção declarada no card (ratio real, quando
+  // já classificado por applyOrientationClasses; senão assume quadrado)
+  const colHeights = new Array(cols).fill(0);
+  items.forEach(item => {
+    const ratio = item.classList.contains("card--portrait") ? 0.75
+      : item.classList.contains("card--landscape") ? 1.333 : 1;
+    const estH = MASONRY_COL_WIDTH / ratio;
+    let shortest = 0;
+    for (let i = 1; i < cols; i++){ if (colHeights[i] < colHeights[shortest]) shortest = i; }
+    colEls[shortest].appendChild(item);
+    colHeights[shortest] += estH + MASONRY_GAP;
+  });
+
+  container.appendChild(track);
+}
+
 // fotos verticais ganham moldura vertical, horizontais ganham horizontal
 function applyOrientationClasses(root = document){
   $$(".card--photo img", root).forEach(img => {
@@ -392,8 +429,9 @@ function renderMural(){
     }
     muralGrid.className = "card-grid card-grid--photos";
     muralGrid.innerHTML = items.map(p => photoCardHTML(p)).join("");
-    observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
+    layoutMasonry(muralGrid);
+    observeCards(muralGrid);
     $$(".card", muralGrid).forEach(el => {
       el.addEventListener("click", () => openLightbox(items, items.findIndex(p => p.id === el.dataset.id)));
     });
@@ -480,8 +518,9 @@ function renderMural(){
     if (childAlbums.length) photosDividerLabel.style.display = "inline-block";
     muralGrid.className = "card-grid card-grid--photos";
     muralGrid.innerHTML = ownPhotos.map(p => photoCardHTML(p)).join("");
-    observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
+    layoutMasonry(muralGrid);
+    observeCards(muralGrid);
     $$(".card", muralGrid).forEach(el => {
       el.addEventListener("click", () => openLightbox(ownPhotos, ownPhotos.findIndex(p => p.id === el.dataset.id)));
     });
