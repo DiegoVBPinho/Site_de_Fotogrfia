@@ -258,9 +258,11 @@ ul{ list-style:none; margin:0; padding:0; }
 /* ============================================================
    Cabeçalho do acervo + busca + categorias
    ============================================================ */
+.section__head--row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap: 1.6rem; margin-bottom: 2.4rem; }
+.section__head--row .section__title{ margin:0; }
 .search-bar--float{
   display:flex; align-items:center; gap:.6rem; width: min(240px, 100%); margin-left:auto;
-  margin-bottom: 2rem; padding: .6rem .9rem; border-radius: 999px; color: rgba(234,233,232,.5);
+  padding: .6rem .9rem; border-radius: 999px; color: rgba(234,233,232,.5);
   background: var(--glass-bg); border: 1px solid var(--glass-border);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
   transition: border-color .3s var(--ease);
