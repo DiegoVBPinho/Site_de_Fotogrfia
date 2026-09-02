@@ -232,29 +232,44 @@ ul{ list-style:none; margin:0; padding:0; }
 @media (max-width: 780px), (hover:none){ .viewfinder{ display:none; } }
 
 /* ============================================================
-   Busca + filtros
+   Cabeçalho do acervo + busca + categorias
    ============================================================ */
-.search-bar{
-  display:flex; align-items:center; gap: .8rem; border-bottom: 1px solid rgba(234,233,232,.18);
-  padding-bottom: 1rem; margin-bottom: 1.8rem; color: rgba(234,233,232,.5); transition: border-color .3s var(--ease);
+.section__head--row{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap: 1.6rem; margin-bottom: 2.4rem; }
+.section__head--row .section__title{ margin:0; }
+.section__head--row .search-bar{
+  display:flex; align-items:center; gap:.6rem; width: min(280px, 100%);
+  border-bottom: 1px solid rgba(234,233,232,.18); padding-bottom: .5rem; color: rgba(234,233,232,.5);
+  transition: border-color .3s var(--ease);
 }
 .search-bar:focus-within{ border-color: var(--orange); color: var(--cream); }
-.search-bar .aperture{ color: var(--orange); flex-shrink:0; }
-.search-bar input{ flex:1; font-size: 1.05rem; }
+.search-bar .aperture{ color: var(--orange); flex-shrink:0; width: .85em; height: .85em; }
+.search-bar input{ flex:1; font-size: .92rem; }
 .search-bar input::placeholder{ color: rgba(234,233,232,.35); }
-.search-bar__clear{ font-family: var(--font-mono); font-size: .74rem; color: var(--orange); }
+.search-bar__clear{ font-family: var(--font-mono); font-size: .68rem; color: var(--orange); flex-shrink:0; }
 
-.filters{ display:flex; flex-wrap:wrap; gap: .7rem; margin-bottom: 2.6rem; }
-.filter-chip{
-  display:flex; align-items:center; gap:.5rem; padding: .55rem 1.1rem; border-radius: 999px;
-  border: 1px solid rgba(234,233,232,.18); font-family: var(--font-mono); font-size: .74rem;
-  letter-spacing: .05em; text-transform: uppercase; color: rgba(234,233,232,.65);
-  transition: border-color .3s var(--ease), color .3s var(--ease), background .3s var(--ease);
+/* trilho de categorias — cada uma é a própria foto, não um botão genérico */
+.cat-rail{
+  display:flex; gap: .9rem; overflow-x:auto; padding-bottom: 1.4rem; margin-bottom: 2.6rem;
+  scrollbar-width: none;
 }
-.filter-chip .aperture{ width:.9em; height:.9em; }
-.filter-chip:hover{ border-color: rgba(216,117,42,.6); color: var(--cream); }
-.filter-chip.active{ background: var(--orange); border-color: var(--orange); color: var(--navy-black); font-weight:700; }
-.filter-chip.active .blade{ fill: var(--navy-black); }
+.cat-rail::-webkit-scrollbar{ display:none; }
+.cat-tile{
+  position:relative; flex: 0 0 auto; width: 132px; height: 84px; border-radius: var(--radius);
+  overflow:hidden; cursor:pointer; isolation:isolate;
+}
+.cat-tile img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  filter: saturate(.6) brightness(.55); transition: transform .5s var(--ease), filter .3s var(--ease);
+}
+.cat-tile::after{ content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(6,15,24,.1), rgba(6,15,24,.75)); }
+.cat-tile__label{
+  position:relative; z-index:1; height:100%; display:flex; align-items:flex-end; padding: .6rem .7rem;
+  font-family: var(--font-mono); font-size: .68rem; letter-spacing:.04em; text-transform:uppercase; color: rgba(234,233,232,.85);
+}
+.cat-tile:hover img{ transform: scale(1.08); filter: saturate(.8) brightness(.65); }
+.cat-tile.active{ box-shadow: 0 0 0 2px var(--orange); }
+.cat-tile.active img{ filter: saturate(1) brightness(.8); }
+.cat-tile.active .cat-tile__label{ color: var(--orange); font-weight:700; }
 
 /* header simples de navegação dentro de um álbum: voltar + título grande
    (nada de trilha de migalhas — a maioria dos álbuns tem só 1 nível) */

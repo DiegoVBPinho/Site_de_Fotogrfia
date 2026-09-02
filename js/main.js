@@ -372,15 +372,26 @@ function matchesSearch(p, query){
   return haystack.includes(q);
 }
 
+// cada categoria mostra a própria foto (a mais antiga que ela tem) em vez
+// de um botão genérico com texto — vira um trilho de miniaturas
+function coverForCategory(catId){
+  if (catId === "todos") return PHOTOS[0];
+  const matches = PHOTOS.filter(p => photoMatchesCategory(p, catId));
+  return matches.reduce((min, p) => (!min || p.data < min.data ? p : min), null);
+}
+
 function renderFilters(){
   const categoriasComConteudo = CATEGORIAS.filter(c => c.id === "todos" || PHOTOS.some(p => photoMatchesCategory(p, c.id)));
-  filtersEl.innerHTML = categoriasComConteudo.map(c => `
-    <button class="filter-chip ${c.id === activeCategory ? "active" : ""}" data-cat="${c.id}">
-      <span class="aperture"></span> ${c.label}
-    </button>
-  `).join("");
-  stampApertures(filtersEl);
-  $$(".filter-chip", filtersEl).forEach(btn => {
+  filtersEl.innerHTML = categoriasComConteudo.map(c => {
+    const cover = coverForCategory(c.id);
+    return `
+      <button class="cat-tile ${c.id === activeCategory ? "active" : ""}" data-cat="${c.id}" data-hover>
+        <img src="${cover ? cover.src : ""}" alt="" loading="lazy">
+        <span class="cat-tile__label">${c.label}</span>
+      </button>
+    `;
+  }).join("");
+  $$(".cat-tile", filtersEl).forEach(btn => {
     btn.addEventListener("click", () => {
       activeCategory = btn.dataset.cat;
       navStack = resolveSingleAlbumChain(activeCategory);
@@ -578,9 +589,13 @@ searchClear.addEventListener("click", () => {
 // substitui os cards parados por algo que rola sozinho, tipo Apple
 function renderTimeline(){
   const track = $("#filmstripTrack");
+  // todo álbum que tem foto própria vira uma entrada — não só os de topo.
+  // álbum-pasta (ex: "Drone", que só existe pra organizar sub-álbuns e não
+  // tem foto direta) fica de fora sozinho, mas cada filho dele entra com a
+  // própria data — assim nada fica escondido dentro do pai
   const dated = ALBUMS
-    .filter(a => a.categoria !== "retratos" && a.parent === null)
-    .map(a => ({ album: a, date: albumEffectiveDate(a.id) }))
+    .filter(a => albumPhotos(a.id).length > 0)
+    .map(a => ({ album: a, date: albumOwnDate(a.id) }))
     .filter(x => x.date)
     .sort((a, b) => new Date(a.date) - new Date(b.date)); // do começo até a data mais atual
 

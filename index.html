@@ -69,19 +69,16 @@
 
 <!-- ===================== MURAL (ÁLBUNS) ===================== -->
 <section class="section" id="mural">
-  <div class="section__head reveal">
-    <p class="eyebrow">Acervo</p>
-    <h2 class="section__title">Mural de Álbuns</h2>
-    <p class="section__desc">Clique num álbum pra entrar. Alguns álbuns têm outros álbuns dentro.</p>
+  <div class="section__head section__head--row reveal">
+    <h2 class="section__title">Acervo</h2>
+    <div class="search-bar">
+      <span class="aperture"></span>
+      <input type="text" id="searchInput" placeholder="Buscar...">
+      <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
+    </div>
   </div>
 
-  <div class="search-bar reveal">
-    <span class="aperture"></span>
-    <input type="text" id="searchInput" placeholder="Buscar por tag, evento ou local...">
-    <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
-  </div>
-
-  <div class="filters reveal" id="filters"></div>
+  <div class="cat-rail reveal" id="filters"></div>
 
   <div class="board reveal">
     <div class="board-nav" id="breadcrumb"></div>
