@@ -752,8 +752,22 @@ const lbDate = $("#lbDate");
 const lbLocal = $("#lbLocal");
 const lbTreeList = $("#lbTreeList");
 const lbTags = $("#lbTags");
+const lbDownload = $("#lbDownload");
 let lbItems = [];
 let lbIndex = 0;
+
+// baixar sempre passa pela foto já com marca d'água — é a única imagem
+// que existe no site, não tem versão "limpa" pública em lugar nenhum
+lbDownload.addEventListener("click", () => {
+  const p = lbItems[lbIndex];
+  if (!p) return;
+  const a = document.createElement("a");
+  a.href = p.src;
+  a.download = p.src.split("/").pop();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
 
 function openLightbox(items, index){
   lbItems = items;
@@ -1020,6 +1034,16 @@ function initHeroPeek(){
   logoWrap.addEventListener("mouseenter", () => hero.classList.add("hero--peek"));
   logoWrap.addEventListener("mouseleave", () => hero.classList.remove("hero--peek"));
 }
+
+// bloqueia clique-direito ("salvar imagem como...") e arrastar em
+// qualquer foto do site — a única forma de baixar é pelo botão "Baixar
+// foto" do lightbox, que já entrega a versão com marca d'água
+document.addEventListener("contextmenu", e => {
+  if (e.target.tagName === "IMG") e.preventDefault();
+});
+document.addEventListener("dragstart", e => {
+  if (e.target.tagName === "IMG") e.preventDefault();
+});
 
 // ============================================================
 // Init
