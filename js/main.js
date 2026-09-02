@@ -107,44 +107,6 @@ function observeCards(container){
   });
 }
 
-// hover num card de álbum: troca de foto suavemente entre algumas fotos
-// do álbum (em vez de ficar parado só na capa) — cards de foto avulsa
-// (.card--photo) ficam de fora, cada um já É uma foto só
-const albumHoverPools = new Map();
-function albumHoverPool(id){
-  if (!albumHoverPools.has(id)){
-    const pool = [...albumPhotosRecursive(id)].sort(() => Math.random() - 0.5).slice(0, 6);
-    albumHoverPools.set(id, pool);
-  }
-  return albumHoverPools.get(id);
-}
-function bindCardHoverPreview(container){
-  if (!HAS_FINE_POINTER) return;
-  $$(".card:not(.card--photo)", container).forEach(card => {
-    const img = $(".card__media img", card);
-    if (!img || !card.dataset.id) return;
-    const originalSrc = img.getAttribute("src");
-    let timer = null, idx = 0;
-    card.addEventListener("mouseenter", () => {
-      const pool = albumHoverPool(card.dataset.id);
-      if (pool.length < 2) return;
-      idx = 0;
-      timer = setInterval(() => {
-        idx = (idx + 1) % pool.length;
-        const next = pool[idx];
-        img.style.opacity = 0;
-        setTimeout(() => { img.src = next.src; img.style.opacity = 1; }, 260);
-      }, 950);
-    });
-    card.addEventListener("mouseleave", () => {
-      clearInterval(timer);
-      timer = null;
-      img.style.opacity = 0;
-      setTimeout(() => { img.src = originalSrc; img.style.opacity = 1; }, 260);
-    });
-  });
-}
-
 // masonry de verdade via JS — CSS columns sozinho "balanceia" pra menos
 // colunas do que cabe quando tem poucas fotos (ex: álbum com 6 fotos usa
 // só 3 colunas mesmo cabendo 5), deixando buraco enorme do lado. Aqui a
@@ -543,7 +505,6 @@ function renderMural(){
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
-    bindCardHoverPreview(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -609,7 +570,6 @@ function renderLatestAlbum(){
   `;
   stampApertures(el);
   observeCards(el);
-  bindCardHoverPreview(el);
   $(".card", el).addEventListener("click", () => {
     navStack = breadcrumbFor(a.id).map(x => x.id);
     searchQuery = ""; searchInput.value = "";

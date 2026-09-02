@@ -412,6 +412,10 @@ ul{ list-style:none; margin:0; padding:0; }
   .latest-album__card{ aspect-ratio: 4 / 5; }
   .latest-album__overlay{ right: 1.2rem; max-width: none; }
 }
+/* só o destaque do álbum mais recente é preto e branco por padrão —
+   colore ao passar o mouse. Os outros álbuns continuam coloridos */
+.latest-album__card .card__media img{ filter: grayscale(1) brightness(1) contrast(1.05); }
+.latest-album__card:hover .card__media img{ filter: grayscale(0) saturate(1.1) brightness(1); }
 
 /* grade de FOTOS (retrato + paisagem misturados) — masonry montado em JS
    (layoutMasonry em main.js). CSS columns sozinho não dava: com poucas
