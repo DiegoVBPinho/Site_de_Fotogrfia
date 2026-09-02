@@ -616,6 +616,13 @@ function renderTimeline(){
 
   // duplica a sequência pra loop sem costura (a animação anda 50% e volta pro início igualzinho)
   track.innerHTML = reels.join("") + reels.join("");
+
+  // velocidade constante (px/s) em vez de duração fixa — assim, conforme mais
+  // álbuns forem entrando e a trilha ficando mais larga, o scroll não acelera
+  const PX_PER_SEC = 40;
+  const singleWidth = track.scrollWidth / 2;
+  track.style.animationDuration = `${Math.max(60, singleWidth / PX_PER_SEC)}s`;
+
   $$(".filmreel[data-id]", track).forEach(reel => {
     reel.addEventListener("click", () => {
       navStack = breadcrumbFor(reel.dataset.id).map(a => a.id);
