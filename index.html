@@ -14,7 +14,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
 
@@ -46,16 +45,6 @@
     </div>
   </div>
 
-  <!-- segue o cursor dentro do hero — troca de foto conforme o mouse anda -->
-  <div class="viewfinder" id="viewfinder">
-    <span class="viewfinder__corner viewfinder__corner--tl"></span>
-    <span class="viewfinder__corner viewfinder__corner--tr"></span>
-    <span class="viewfinder__corner viewfinder__corner--bl"></span>
-    <span class="viewfinder__corner viewfinder__corner--br"></span>
-    <div class="viewfinder__frame"><img id="viewfinderImg" src="" alt=""></div>
-    <span class="viewfinder__label" id="viewfinderLabel"></span>
-  </div>
-
   <div class="hero__scroll reveal">
     role para baixo
     <span class="hero__scroll-arrow">
@@ -67,16 +56,11 @@
 <!-- ===================== MURAL (ÁLBUNS) ===================== -->
 <section class="section" id="mural">
   <div class="section__bg" id="muralBg"></div>
-  <div class="section__head section__head--row reveal">
-    <h2 class="section__title">Acervo</h2>
-    <div class="search-bar">
-      <span class="aperture"></span>
-      <input type="text" id="searchInput" placeholder="Buscar...">
-      <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
-    </div>
+  <div class="search-bar search-bar--float reveal">
+    <span class="aperture"></span>
+    <input type="text" id="searchInput" placeholder="Buscar...">
+    <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
   </div>
-
-  <div class="cat-rail reveal" id="filters"></div>
 
   <div class="board reveal">
     <div class="board-nav" id="breadcrumb"></div>
@@ -132,7 +116,6 @@
   <img class="footer__signature" src="images/brand/assinatura-white-transparent.png" alt="Assinatura Diego Victor">
   <div class="footer__bottom">
     <p class="footer__meta">© Diego Victor Fotografia</p>
-    <button class="footer__admin-link" id="openAdminBtn" data-hover>Como atualizar o site</button>
   </div>
 </footer>
 
@@ -158,60 +141,6 @@
     <div class="lightbox__tags" id="lbTags"></div>
     <p class="lightbox__hint">Clique na foto pra ampliar · arraste pro lado pra navegar.</p>
   </aside>
-</div>
-
-<!-- ===================== COMO ATUALIZAR O SITE ===================== -->
-<div class="admin-overlay" id="adminOverlay">
-  <button class="admin-overlay__close" id="closeAdminBtn" aria-label="Fechar guia" data-hover>✕</button>
-  <div class="admin-wrap">
-    <div class="admin-header">
-      <img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia">
-      <h1 class="section__title" style="margin-top:0;">Como atualizar <span>o site</span></h1>
-    </div>
-
-    <p class="admin-note">
-      <b>Como isso funciona:</b> os álbuns, fotos, o texto "Sobre mim" e os
-      links de contato vêm de uma <b>planilha Google</b>, não do código.
-      Editou a planilha? É só recarregar o site — sem <code>git push</code>,
-      sem redeploy. Pode levar alguns minutos pra planilha propagar.
-    </p>
-
-    <div class="admin-actions" style="margin-bottom: 2.4rem;">
-      <a class="btn btn--primary" id="openSheetBtn" href="#" target="_blank" rel="noopener" data-hover><span class="aperture"></span> Abrir a planilha</a>
-    </div>
-
-    <div class="admin-card">
-      <h2>Adicionar fotos a um álbum</h2>
-      <p class="admin-sub">Na aba <code>Fotos</code>, uma linha por foto.</p>
-      <ol class="admin-steps">
-        <li>Coluna <code>album_id</code>: o id do álbum onde a foto entra (veja a aba <code>Albuns</code>).</li>
-        <li>Coluna <code>imagem</code>: cole o link de compartilhamento do Google Drive da foto (Drive → botão direito → Compartilhar → Copiar link, com acesso "Qualquer pessoa com o link"). O site converte sozinho.</li>
-        <li>Preencha <code>data</code> (AAAA-MM-DD), <code>titulo</code>, <code>local</code> e <code>tags</code> (separadas por vírgula).</li>
-        <li>Deixe <code>foto_id</code> único (ex: <code>casamento-joao-05</code>).</li>
-      </ol>
-    </div>
-
-    <div class="admin-card">
-      <h2>Criar um álbum novo</h2>
-      <p class="admin-sub">Na aba <code>Albuns</code>, uma linha por álbum.</p>
-      <ol class="admin-steps">
-        <li><code>album_id</code>: um identificador único, sem espaço ou acento (ex: <code>casamento-joao</code>).</li>
-        <li><code>album_pai</code>: deixe vazio se for um álbum principal, ou coloque o id de outro álbum pra criar álbum dentro de álbum.</li>
-        <li><code>categoria</code>: precisa bater com um id da aba <code>Categorias</code>.</li>
-        <li><code>titulo</code>, <code>subtitulo</code> (opcional) e <code>capa</code> (link do Drive, igual às fotos).</li>
-      </ol>
-    </div>
-
-    <div class="admin-card">
-      <h2>Textos e contato</h2>
-      <p class="admin-sub">Na aba <code>Config</code>, uma linha por campo (colunas <code>chave</code> / <code>valor</code>).</p>
-      <ol class="admin-steps">
-        <li><code>sobre_mim</code>: o texto da seção "Sobre mim".</li>
-        <li><code>instagram</code> e <code>email</code>: o link completo (<code>https://instagram.com/seu_usuario</code>) e o e-mail.</li>
-        <li><code>whatsapp</code>: só o número com DDI e DDD (ex: <code>5535999999999</code>) ou um link <code>wa.me</code> completo.</li>
-      </ol>
-    </div>
-  </div>
 </div>
 
 <!-- ===================== BARRA INFERIOR (SÓ CELULAR) ===================== -->

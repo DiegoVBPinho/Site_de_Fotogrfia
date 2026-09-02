@@ -175,100 +175,43 @@ function initMagnetic(){
 }
 
 // ============================================================
-// Hero — fundo em crossfade + "viewfinder" que segue o cursor
+// Hero — mosaico uniforme (tipo "gota d'água" do site original),
+// peças do mesmo tamanho encaixadas lado a lado até completar o
+// hero inteiro, sem parar: flutua e troca foto sozinho depois.
 // ============================================================
-let heroPool = [];
-
-function checkLandscape(photo){
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(img.naturalWidth >= img.naturalHeight * 1.05 ? photo : null);
-    img.onerror = () => resolve(null);
-    img.src = photo.src;
-  });
-}
-
-async function buildHeroPool(){
-  const shuffled = [...PHOTOS].sort(() => Math.random() - 0.5);
-  const results = await Promise.all(shuffled.slice(0, 60).map(checkLandscape));
-  heroPool = results.filter(Boolean).slice(0, 22);
-  if (!heroPool.length) heroPool = shuffled.slice(0, 10);
-}
-
-// ------------------------------------------------------------
-// Mosaico do hero — grade que nunca para: entra em "gota d'água"
-// (atraso cresce do centro pras bordas), flutua sozinha depois de
-// assentar, e troca fotos aos poucos em tiles aleatórios pra ficar viva.
-// ------------------------------------------------------------
 function computeHeroGrid(){
   const w = window.innerWidth, h = window.innerHeight;
   const mobile = w < 640;
-  const targetCell = mobile ? 46 : 74;
-  const cols = Math.max(mobile ? 8 : 14, Math.min(mobile ? 12 : 26, Math.round(w / targetCell)));
-  const rows = Math.max(mobile ? 14 : 10, Math.min(mobile ? 20 : 16, Math.round(h / targetCell)));
+  const targetCell = mobile ? 95 : 165;
+  const cols = Math.max(mobile ? 4 : 6, Math.min(mobile ? 6 : 13, Math.round(w / targetCell)));
+  const rows = Math.max(mobile ? 7 : 4, Math.min(mobile ? 10 : 8, Math.round(h / targetCell)));
   return { cols, rows };
-}
-
-// formas mistas (deitada/em pé/quadrada/grande) — encaixadas com grid
-// "dense" pra parecer um mosaico feito de peças diferentes, tipo quebra-
-// cabeça, e não uma grade uniforme de quadradinhos iguais
-const HERO_SHAPES = [
-  { cls: "w2h1", cw: 2, ch: 1, weight: 5 },  // deitada
-  { cls: "w1h2", cw: 1, ch: 2, weight: 5 },  // em pé
-  { cls: "w1h1", cw: 1, ch: 1, weight: 6 },  // quadrada
-  { cls: "w2h2", cw: 2, ch: 2, weight: 2 },  // grande, de vez em quando
-];
-function pickShape(){
-  const total = HERO_SHAPES.reduce((s, x) => s + x.weight, 0);
-  let r = Math.random() * total;
-  for (const s of HERO_SHAPES){ if ((r -= s.weight) <= 0) return s; }
-  return HERO_SHAPES[0];
 }
 
 function initHeroMosaic(){
   const el = $("#heroMosaic");
-  const pool = (PHOTOS.length ? PHOTOS : heroPool).filter(Boolean);
+  const pool = PHOTOS.filter(Boolean);
   if (!pool.length) return;
   const { cols, rows } = computeHeroGrid();
+  const cells = cols * rows;
   el.style.setProperty("--hero-cols", cols);
   el.style.setProperty("--hero-rows", rows);
 
-  // preenche uma grade fina (cols x rows) com peças de tamanhos variados,
-  // sem sobrepor — varre livre-a-livre e encaixa a maior forma que couber
-  const occupied = Array.from({ length: rows }, () => new Array(cols).fill(false));
-  const placements = [];
-  for (let r = 0; r < rows; r++){
-    for (let c = 0; c < cols; c++){
-      if (occupied[r][c]) continue;
-      let shape = pickShape();
-      while ((r + shape.ch > rows || c + shape.cw > cols || !fits(r, c, shape)) && (shape.cw > 1 || shape.ch > 1)){
-        shape = { cls: "w1h1", cw: 1, ch: 1 };
-      }
-      for (let rr = r; rr < r + shape.ch; rr++) for (let cc = c; cc < c + shape.cw; cc++) occupied[rr][cc] = true;
-      placements.push({ row: r, col: c, ...shape });
-    }
-  }
-  function fits(r, c, shape){
-    for (let rr = r; rr < r + shape.ch; rr++) for (let cc = c; cc < c + shape.cw; cc++){
-      if (rr >= rows || cc >= cols || occupied[rr][cc]) return false;
-    }
-    return true;
-  }
-
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const picks = [];
+  while (picks.length < cells) picks.push(shuffled[picks.length % shuffled.length]);
+
   const RIPPLE_START = 0.05, RIPPLE_SPREAD = 0.85;
   const centerRow = (rows - 1) / 2, centerCol = (cols - 1) / 2;
   const maxDist = Math.hypot(centerRow, centerCol) || 1;
 
   el.innerHTML = "";
-  const tiles = placements.map((pl, idx) => {
-    const p = shuffled[idx % shuffled.length];
-    const dist = Math.hypot((pl.row + pl.ch / 2) - centerRow, (pl.col + pl.cw / 2) - centerCol) / maxDist;
+  const tiles = picks.map((p, idx) => {
+    const row = Math.floor(idx / cols), col = idx % cols;
+    const dist = Math.hypot(row - centerRow, col - centerCol) / maxDist;
     const delay = REDUCE_MOTION ? 0 : (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.1);
     const fig = document.createElement("figure");
     fig.className = "hero__tile";
-    fig.style.gridColumn = `${pl.col + 1} / span ${pl.cw}`;
-    fig.style.gridRow = `${pl.row + 1} / span ${pl.ch}`;
     fig.style.transitionDelay = delay.toFixed(2) + "s";
     fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
     el.appendChild(fig);
@@ -279,17 +222,15 @@ function initHeroMosaic(){
     tiles.forEach(t => t.classList.add("in-view"));
   }));
 
-  // logo entra em recorte "quadro a quadro" (steps) por cima do mosaico
-  const logoWrap = $("#heroLogoWrap");
   const logoDelayMs = (RIPPLE_START + RIPPLE_SPREAD + 0.5) * 1000;
   setTimeout(() => {
     $("#heroContent").classList.add("is-visible");
-    if (logoWrap) logoWrap.classList.add("play");
+    playLogoReveal();
   }, REDUCE_MOTION ? 0 : logoDelayMs);
 
   if (REDUCE_MOTION) return;
   const heroEl = $("#inicio");
-  // troca fotos aos poucos em alguns tiles aleatórios — mantém o mosaico vivo sem nunca ficar igual
+  // troca fotos aos poucos em tiles aleatórios — mantém o mosaico vivo sem nunca ficar igual
   setInterval(() => {
     if (!heroEl || heroEl.getBoundingClientRect().bottom < 0) return; // fora da tela, poupa trabalho
     const n = Math.max(1, Math.round(tiles.length * 0.06));
@@ -304,60 +245,41 @@ function initHeroMosaic(){
   }, 1400);
 }
 
-function initViewfinder(){
-  if (!HAS_FINE_POINTER || REDUCE_MOTION || !heroPool.length) return;
-  const hero = $("#inicio");
-  const vf = $("#viewfinder");
-  const vfImg = $("#viewfinderImg");
-  const vfLabel = $("#viewfinderLabel");
-
-  let tx = 0, ty = 0, cx = 0, cy = 0, active = false;
-  let lastAdvanceX = 0, lastAdvanceY = 0, idx = 0;
-  const STEP = 130; // px percorridos até trocar de frame
-
-  function showFrame(i){
-    const p = heroPool[i % heroPool.length];
-    vfImg.style.opacity = 0;
-    const img = new Image();
-    img.onload = () => { vfImg.src = p.src; vfImg.alt = p.titulo || ""; vfImg.style.opacity = 1; };
-    img.src = p.src;
-    const album = getAlbum(p.album);
-    vfLabel.textContent = album ? album.titulo : (p.titulo || "");
-  }
-  showFrame(0);
-
-  let ticking = false;
-  function tick(){
-    cx += (tx - cx) * 0.14; cy += (ty - cy) * 0.14;
-    vf.style.transform = `translate3d(${cx + 26}px, ${cy - 90}px, 0)`;
-    if (active || Math.abs(tx - cx) > 0.1 || Math.abs(ty - cy) > 0.1){
-      requestAnimationFrame(tick);
-    } else {
-      ticking = false;
+// ------------------------------------------------------------
+// Logo — recorte quadro a quadro: fatia a logo em tiras e cada uma
+// "bate" no lugar em sequência, tipo frame de filme, nada de fade.
+// ------------------------------------------------------------
+const LOGO_STRIPS = 7;
+function buildLogoStrips(){
+  const wrap = $("#heroLogoWrap");
+  const original = wrap.querySelector("img.hero__logo");
+  if (!original) return;
+  const src = original.getAttribute("src"), alt = original.getAttribute("alt");
+  const setup = () => {
+    const ratio = original.naturalWidth && original.naturalHeight ? original.naturalWidth / original.naturalHeight : 3.4;
+    wrap.style.aspectRatio = ratio.toFixed(3);
+    wrap.innerHTML = "";
+    for (let i = 0; i < LOGO_STRIPS; i++){
+      const img = document.createElement("img");
+      img.src = src; img.alt = i === 0 ? alt : "";
+      img.className = "hero__logo hero__logo-strip";
+      const top = (i / LOGO_STRIPS) * 100, bottom = 100 - ((i + 1) / LOGO_STRIPS) * 100;
+      img.style.clipPath = `inset(${top.toFixed(2)}% 0 ${bottom.toFixed(2)}% 0)`;
+      img.style.setProperty("--sd", (i * 0.11).toFixed(2) + "s");
+      wrap.appendChild(img);
     }
-  }
-  function ensureTicking(){
-    if (!ticking){ ticking = true; requestAnimationFrame(tick); }
-  }
-
-  hero.addEventListener("mousemove", e => {
-    tx = e.clientX; ty = e.clientY;
-    if (!active){ active = true; cx = tx; cy = ty; vf.classList.add("is-active"); }
-    const dx = tx - lastAdvanceX, dy = ty - lastAdvanceY;
-    if (Math.hypot(dx, dy) > STEP){
-      idx++; showFrame(idx);
-      lastAdvanceX = tx; lastAdvanceY = ty;
-    }
-    ensureTicking();
-  });
-  hero.addEventListener("mouseleave", () => { active = false; vf.classList.remove("is-active"); ensureTicking(); });
-  hero.addEventListener("mouseenter", e => { lastAdvanceX = e.clientX; lastAdvanceY = e.clientY; });
+  };
+  if (original.complete && original.naturalWidth) setup();
+  else original.addEventListener("load", setup, { once: true });
+}
+function playLogoReveal(){
+  const wrap = $("#heroLogoWrap");
+  if (wrap) wrap.classList.add("play");
 }
 
-async function initHero(){
+function initHero(){
+  buildLogoStrips();
   initHeroMosaic();
-  await buildHeroPool();
-  initViewfinder();
 }
 
 // ============================================================
@@ -383,7 +305,6 @@ $$("#navLinks a").forEach(a => a.addEventListener("click", () => {
 // ============================================================
 // Mural (álbuns aninhados)
 // ============================================================
-const filtersEl = $("#filters");
 const muralGrid = $("#muralGrid");
 const folderZone = $("#folderZone");
 const photosDividerLabel = $("#photosDividerLabel");
@@ -411,35 +332,6 @@ function matchesSearch(p, query){
     album ? album.titulo : "", album ? album.subtitulo : "",
   ].join(" ").toLowerCase();
   return haystack.includes(q);
-}
-
-// cada categoria mostra a própria foto (a mais antiga que ela tem) em vez
-// de um botão genérico com texto — vira um trilho de miniaturas
-function coverForCategory(catId){
-  if (catId === "todos") return PHOTOS[0];
-  const matches = PHOTOS.filter(p => photoMatchesCategory(p, catId));
-  return matches.reduce((min, p) => (!min || p.data < min.data ? p : min), null);
-}
-
-function renderFilters(){
-  const categoriasComConteudo = CATEGORIAS.filter(c => c.id === "todos" || PHOTOS.some(p => photoMatchesCategory(p, c.id)));
-  filtersEl.innerHTML = categoriasComConteudo.map(c => {
-    const cover = coverForCategory(c.id);
-    return `
-      <button class="cat-tile ${c.id === activeCategory ? "active" : ""}" data-cat="${c.id}" data-hover>
-        <img src="${cover ? cover.src : ""}" alt="" loading="lazy">
-        <span class="cat-tile__label">${c.label}</span>
-      </button>
-    `;
-  }).join("");
-  $$(".cat-tile", filtersEl).forEach(btn => {
-    btn.addEventListener("click", () => {
-      activeCategory = btn.dataset.cat;
-      navStack = resolveSingleAlbumChain(activeCategory);
-      renderFilters();
-      renderMural();
-    });
-  });
 }
 
 // header simples: "← Voltar" + título do álbum atual — nada de trilha de
@@ -740,7 +632,6 @@ function updateLightbox(){
       activeCategory = "todos";
       searchInput.value = chip.dataset.tag;
       searchQuery = chip.dataset.tag;
-      renderFilters();
       renderMural();
       $(".board").scrollIntoView({ behavior: "smooth" });
     });
@@ -809,19 +700,6 @@ Object.entries(socialLinks).forEach(([sel, href]) => {
   } else {
     el.addEventListener("click", e => e.preventDefault());
   }
-});
-
-// ============================================================
-// Guia "Como atualizar o site" — abrir/fechar
-// ============================================================
-const adminOverlay = $("#adminOverlay");
-$("#openAdminBtn").addEventListener("click", () => {
-  adminOverlay.classList.add("open");
-  document.body.style.overflow = "hidden";
-});
-$("#closeAdminBtn").addEventListener("click", () => {
-  adminOverlay.classList.remove("open");
-  document.body.style.overflow = "";
 });
 
 // ============================================================
@@ -927,7 +805,6 @@ initMagnetic();
 initHero();
 initSectionBackgrounds();
 initParallax();
-renderFilters();
 renderMural();
 renderTimeline();
 observeReveals();
