@@ -251,14 +251,14 @@ function initHeroMosaic(){
 // ------------------------------------------------------------
 const LOGO_STRIPS = 7;
 function buildLogoStrips(){
-  const wrap = $("#heroLogoWrap");
-  const original = wrap.querySelector("img.hero__logo");
+  const stage = $("#heroLogoStage");
+  const original = stage.querySelector("img.hero__logo");
   if (!original) return;
   const src = original.getAttribute("src"), alt = original.getAttribute("alt");
   const setup = () => {
     const ratio = original.naturalWidth && original.naturalHeight ? original.naturalWidth / original.naturalHeight : 3.4;
-    wrap.style.aspectRatio = ratio.toFixed(3);
-    wrap.innerHTML = "";
+    stage.style.aspectRatio = ratio.toFixed(3);
+    stage.innerHTML = "";
     for (let i = 0; i < LOGO_STRIPS; i++){
       const img = document.createElement("img");
       img.src = src; img.alt = i === 0 ? alt : "";
@@ -266,7 +266,7 @@ function buildLogoStrips(){
       const top = (i / LOGO_STRIPS) * 100, bottom = 100 - ((i + 1) / LOGO_STRIPS) * 100;
       img.style.clipPath = `inset(${top.toFixed(2)}% 0 ${bottom.toFixed(2)}% 0)`;
       img.style.setProperty("--sd", (i * 0.11).toFixed(2) + "s");
-      wrap.appendChild(img);
+      stage.appendChild(img);
     }
   };
   if (original.complete && original.naturalWidth) setup();
@@ -362,6 +362,7 @@ function renderMural(){
   renderBreadcrumb();
   folderZone.innerHTML = "";
   photosDividerLabel.style.display = "none";
+  muralGrid.className = "card-grid";
 
   if (searchQuery){
     searchClear.style.display = "inline";
@@ -373,6 +374,7 @@ function renderMural(){
       muralGrid.innerHTML = `<p class="no-results">Nenhuma foto encontrada para "${searchQuery}".</p>`;
       return;
     }
+    muralGrid.className = "card-grid card-grid--photos";
     muralGrid.innerHTML = items.map(p => photoCardHTML(p)).join("");
     observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
@@ -399,11 +401,7 @@ function renderMural(){
       if (!byAlbum.has(p.album)) { byAlbum.set(p.album, { album: getAlbum(p.album), photos: [] }); groups.push(byAlbum.get(p.album)); }
       byAlbum.get(p.album).photos.push(p);
     });
-    groups.sort((a, b) => {
-      const da = a.photos.reduce((min, p) => (p.data < min ? p.data : min), a.photos[0].data);
-      const db = b.photos.reduce((min, p) => (p.data < min ? p.data : min), b.photos[0].data);
-      return new Date(da) - new Date(db);
-    });
+    groups.sort((a, b) => (a.album ? a.album.titulo : "").localeCompare(b.album ? b.album.titulo : "", "pt-BR"));
     const showTitles = groups.length > 1;
 
     muralGrid.innerHTML = groups.map(g => {
@@ -433,16 +431,12 @@ function renderMural(){
   }
 
   const currentParent = navStack.length ? navStack[navStack.length - 1] : null;
-  let childAlbums = children(currentParent);
-  if (currentParent === null){
-    childAlbums = childAlbums.filter(a => activeCategory === "todos" || a.categoria === activeCategory);
-  }
-  childAlbums = sortAlbumsByDate(childAlbums);
-  const ownPhotos = currentParent
-    ? albumPhotos(currentParent)
-    : (activeCategory !== "todos" && !childAlbums.length
-        ? PHOTOS.filter(p => photoMatchesCategory(p, activeCategory))
-        : []);
+  // raiz: TODOS os álbuns com foto própria, de qualquer nível, em ordem
+  // alfabética — nada de esconder sub-álbum atrás de clique em pasta
+  let childAlbums = currentParent === null
+    ? ALBUMS.filter(a => albumHasContent(a.id)).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"))
+    : sortAlbumsByDate(children(currentParent));
+  const ownPhotos = currentParent ? albumPhotos(currentParent) : [];
 
   if (childAlbums.length){
     folderZone.innerHTML = `
@@ -464,6 +458,7 @@ function renderMural(){
 
   if (ownPhotos.length){
     if (childAlbums.length) photosDividerLabel.style.display = "inline-block";
+    muralGrid.className = "card-grid card-grid--photos";
     muralGrid.innerHTML = ownPhotos.map(p => photoCardHTML(p)).join("");
     observeCards(muralGrid);
     applyOrientationClasses(muralGrid);
@@ -473,7 +468,7 @@ function renderMural(){
   } else if (!childAlbums.length){
     muralGrid.innerHTML = currentParent
       ? `<p class="no-results">Este álbum ainda não tem fotos.</p>`
-      : `<p class="no-results">Nenhum álbum nesta categoria ainda.</p>`;
+      : `<p class="no-results">Nenhum álbum ainda.</p>`;
   } else {
     muralGrid.innerHTML = "";
   }

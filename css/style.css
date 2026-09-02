@@ -184,7 +184,7 @@ ul{ list-style:none; margin:0; padding:0; }
   position:absolute; inset:0; z-index:0; display:grid;
   grid-template-columns: repeat(var(--hero-cols, 18), 1fr);
   grid-template-rows: repeat(var(--hero-rows, 12), 1fr);
-  gap: 1px;
+  gap: 0;
 }
 .hero__tile{ position:relative; overflow:hidden; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
 .hero__tile.in-view{ opacity: 1; transform: scale(1); }
@@ -235,7 +235,14 @@ ul{ list-style:none; margin:0; padding:0; }
   font-family: var(--font-mono); font-size: .78rem; letter-spacing: .3em; text-transform: uppercase;
   color: rgba(234,233,232,.55); margin: 0 0 1.6rem;
 }
-.hero__logo-wrap{ position:relative; max-width: min(760px, 82vw); margin: 0 auto; }
+.hero__logo-wrap{
+  position:relative; max-width: min(1040px, 94vw); margin: 0 auto;
+  padding: clamp(1.4rem, 4vw, 3.2rem);
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px;
+  backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
+  box-shadow: 0 30px 80px -24px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.hero__logo-stage{ position:relative; width:100%; }
 .hero__logo{ width: 100%; filter: drop-shadow(0 10px 40px rgba(0,0,0,.5)); }
 .hero__scroll{
   position:absolute; z-index:3; bottom: 2.4rem; left:50%; transform: translateX(-50%);
@@ -358,10 +365,22 @@ ul{ list-style:none; margin:0; padding:0; }
 .card--photo.card--landscape{ aspect-ratio: 4 / 3; }
 .card--photo.card--portrait{ aspect-ratio: 3 / 4; }
 
+/* grade de FOTOS (retrato + paisagem misturados) precisa de masonry de
+   verdade — grid comum estica a linha inteira pra caber a foto mais alta
+   e deixa buraco embaixo das mais baixas. columns resolve isso: cada
+   coluna empilha do jeito que dá, sem forçar altura de linha */
+.card-grid--photos{
+  display:block; column-count: 3; column-gap: 1.4rem;
+}
+.card-grid--photos .card{ break-inside: avoid; margin-bottom: 1.4rem; width: 100%; }
+@media (max-width: 1100px){ .card-grid--photos{ column-count: 2; } }
+@media (max-width: 560px){ .card-grid--photos{ column-count: 1; } }
+
 /* ------ mobile: blocos por álbum com "ver mais" ------ */
 .mobile-album-block{ margin-bottom: 2.6rem; }
 .mobile-album-block__title{ font-family: var(--font-display); font-weight:700; font-size:1.1rem; margin: 0 0 1rem; }
-.mobile-album-block__frames{ display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: .9rem; }
+.mobile-album-block__frames{ columns: 2; column-gap: .9rem; }
+.mobile-album-block__frames .card{ break-inside: avoid; margin-bottom: .9rem; width:100%; }
 .mobile-album-block__more{
   margin-top: 1rem; font-family: var(--font-mono); font-size:.76rem; letter-spacing:.05em; text-transform:uppercase;
   color: var(--orange); display:flex; align-items:center; gap:.4rem;
