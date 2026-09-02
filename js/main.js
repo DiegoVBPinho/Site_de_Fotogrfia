@@ -102,8 +102,46 @@ const cardObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0.12 });
 function observeCards(container){
   $$(".card", container).forEach((el, i) => {
-    el.style.transitionDelay = (Math.min(i % 10, 9) * 0.06).toFixed(2) + "s";
+    el.style.transitionDelay = (Math.min(i % 10, 9) * 0.09).toFixed(2) + "s";
     cardObserver.observe(el);
+  });
+}
+
+// hover num card de álbum: troca de foto suavemente entre algumas fotos
+// do álbum (em vez de ficar parado só na capa) — cards de foto avulsa
+// (.card--photo) ficam de fora, cada um já É uma foto só
+const albumHoverPools = new Map();
+function albumHoverPool(id){
+  if (!albumHoverPools.has(id)){
+    const pool = [...albumPhotosRecursive(id)].sort(() => Math.random() - 0.5).slice(0, 6);
+    albumHoverPools.set(id, pool);
+  }
+  return albumHoverPools.get(id);
+}
+function bindCardHoverPreview(container){
+  if (!HAS_FINE_POINTER) return;
+  $$(".card:not(.card--photo)", container).forEach(card => {
+    const img = $(".card__media img", card);
+    if (!img || !card.dataset.id) return;
+    const originalSrc = img.getAttribute("src");
+    let timer = null, idx = 0;
+    card.addEventListener("mouseenter", () => {
+      const pool = albumHoverPool(card.dataset.id);
+      if (pool.length < 2) return;
+      idx = 0;
+      timer = setInterval(() => {
+        idx = (idx + 1) % pool.length;
+        const next = pool[idx];
+        img.style.opacity = 0;
+        setTimeout(() => { img.src = next.src; img.style.opacity = 1; }, 260);
+      }, 950);
+    });
+    card.addEventListener("mouseleave", () => {
+      clearInterval(timer);
+      timer = null;
+      img.style.opacity = 0;
+      setTimeout(() => { img.src = originalSrc; img.style.opacity = 1; }, 260);
+    });
   });
 }
 
@@ -355,7 +393,7 @@ $$("#navLinks a").forEach(a => a.addEventListener("click", () => {
 const muralGrid = $("#muralGrid");
 const folderZone = $("#folderZone");
 const photosDividerLabel = $("#photosDividerLabel");
-const breadcrumbEl = $("#breadcrumb");
+const breadcrumbEl = $("#navAlbum");
 const searchInput = $("#searchInput");
 const searchClear = $("#searchClear");
 
@@ -385,7 +423,7 @@ function matchesSearch(p, query){
 // migalhas (a maioria dos álbuns só tem 1 nível de profundidade mesmo)
 function renderBreadcrumb(){
   if (searchQuery){
-    breadcrumbEl.innerHTML = `<h3 class="board-nav__title">Resultados da busca "${searchQuery}"</h3>`;
+    breadcrumbEl.innerHTML = `<h3 class="nav__album__title">Resultados da busca "${searchQuery}"</h3>`;
     return;
   }
   if (!navStack.length){
@@ -394,10 +432,10 @@ function renderBreadcrumb(){
   }
   const current = getAlbum(navStack[navStack.length - 1]);
   breadcrumbEl.innerHTML = `
-    <button class="board-nav__back" id="boardBack" data-hover>← Voltar</button>
-    <h3 class="board-nav__title">${current.titulo}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
+    <button class="nav__album__back" id="navAlbumBack" data-hover>← Voltar</button>
+    <h3 class="nav__album__title">${current.titulo}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
   `;
-  $("#boardBack").addEventListener("click", () => {
+  $("#navAlbumBack").addEventListener("click", () => {
     navStack = navStack.length > 1 ? navStack.slice(0, -1) : resolveSingleAlbumChain(activeCategory);
     renderMural();
   });
@@ -505,6 +543,7 @@ function renderMural(){
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
+    bindCardHoverPreview(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -548,10 +587,14 @@ function renderLatestAlbum(){
 
   if (!candidates.length){ el.innerHTML = ""; return; }
 
-  const { album: a, date } = candidates[0];
+  const { album: leaf, date } = candidates[0];
+  // se o mais recente é um sub-álbum, destaca o álbum-pai (o evento
+  // inteiro), não o pedacinho — "Banda" sozinho não diz nada, "Feirão
+  // Folclórico 2026" diz
+  const a = leaf.parent ? getAlbum(leaf.parent) : leaf;
   const parent = a.parent ? getAlbum(a.parent) : null;
   const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
-  const count = albumPhotos(a.id).length;
+  const count = albumPhotosRecursive(a.id).length;
 
   el.innerHTML = `
     <figure class="card latest-album__card" data-id="${a.id}" data-hover>
@@ -566,6 +609,7 @@ function renderLatestAlbum(){
   `;
   stampApertures(el);
   observeCards(el);
+  bindCardHoverPreview(el);
   $(".card", el).addEventListener("click", () => {
     navStack = breadcrumbFor(a.id).map(x => x.id);
     searchQuery = ""; searchInput.value = "";
@@ -644,11 +688,12 @@ function renderTimeline(){
       reels.push(`<div class="filmreel filmreel--marker"><span class="filmreel__year">${year}</span></div>`);
       lastYear = year;
     }
+    const count = albumPhotos(a.id).length;
     reels.push(`
       <figure class="filmreel" data-id="${a.id}" data-hover>
         <img src="${a.cover}" alt="${a.titulo}" loading="lazy">
         <figcaption class="filmreel__cap">
-          <p class="filmreel__title">${a.titulo}</p>
+          <p class="filmreel__title">${a.titulo} (${count} foto${count === 1 ? "" : "s"})</p>
           <p class="filmreel__date">${formatDateShort(date)}</p>
         </figcaption>
       </figure>
@@ -658,11 +703,9 @@ function renderTimeline(){
   // duplica a sequência pra loop sem costura (a animação anda 50% e volta pro início igualzinho)
   track.innerHTML = reels.join("") + reels.join("");
 
-  // velocidade constante (px/s) em vez de duração fixa — assim, conforme mais
-  // álbuns forem entrando e a trilha ficando mais larga, o scroll não acelera
-  const PX_PER_SEC = 40;
-  const singleWidth = track.scrollWidth / 2;
-  track.style.animationDuration = `${Math.max(60, singleWidth / PX_PER_SEC)}s`;
+  filmstripSingleWidth = track.scrollWidth / 2;
+  filmstripOffset = 0;
+  track.style.transform = "translateX(0px)";
 
   $$(".filmreel[data-id]", track).forEach(reel => {
     reel.addEventListener("click", () => {
@@ -672,6 +715,57 @@ function renderTimeline(){
       $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
+}
+
+// posição da trilha (px, sempre <= 0) controlada em rAF — dá pra pausar no
+// hover e pular com as setas sem brigar com uma animação CSS por baixo
+let filmstripSingleWidth = 0;
+let filmstripOffset = 0;
+let filmstripHover = false;
+let filmstripFreezeUntil = 0;
+const FILMSTRIP_SPEED = 40; // px/s
+
+function initFilmstripNav(){
+  const wrap = $(".filmstrip-wrap");
+  const track = $("#filmstripTrack");
+  const prevBtn = $("#filmstripPrev");
+  const nextBtn = $("#filmstripNext");
+  if (!wrap || !track || !prevBtn || !nextBtn) return;
+
+  wrap.addEventListener("mouseenter", () => { filmstripHover = true; });
+  wrap.addEventListener("mouseleave", () => { filmstripHover = false; });
+
+  function jump(dir){
+    if (!filmstripSingleWidth) return;
+    const step = 3 * (340 + 14); // ~3 álbuns por clique
+    if (dir === "next"){
+      filmstripOffset -= step;
+      if (filmstripOffset <= -filmstripSingleWidth) filmstripOffset += filmstripSingleWidth;
+    } else {
+      filmstripOffset += step;
+      if (filmstripOffset > 0) filmstripOffset -= filmstripSingleWidth;
+    }
+    track.style.transition = "transform .5s var(--ease-soft)";
+    track.style.transform = `translateX(${filmstripOffset}px)`;
+    filmstripFreezeUntil = performance.now() + 2600;
+    setTimeout(() => { track.style.transition = ""; }, 520);
+  }
+  prevBtn.addEventListener("click", () => jump("prev"));
+  nextBtn.addEventListener("click", () => jump("next"));
+
+  let lastTs = null;
+  function tick(ts){
+    if (lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    if (filmstripSingleWidth > 0 && !REDUCE_MOTION && !filmstripHover && ts > filmstripFreezeUntil){
+      filmstripOffset -= FILMSTRIP_SPEED * dt;
+      if (filmstripOffset <= -filmstripSingleWidth) filmstripOffset += filmstripSingleWidth;
+      track.style.transform = `translateX(${filmstripOffset}px)`;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 // ============================================================
@@ -946,6 +1040,16 @@ function initParallax(){
   requestAnimationFrame(tick);
 }
 
+// hover na logo do hero: some ela e o degradê, revelando o mosaico puro
+// atrás — só pra quem tem mouse de verdade (em touch não existe hover)
+function initHeroPeek(){
+  const hero = $("#inicio");
+  const logoWrap = $("#heroLogoWrap");
+  if (!hero || !logoWrap || !HAS_FINE_POINTER) return;
+  logoWrap.addEventListener("mouseenter", () => hero.classList.add("hero--peek"));
+  logoWrap.addEventListener("mouseleave", () => hero.classList.remove("hero--peek"));
+}
+
 // ============================================================
 // Init
 // ============================================================
@@ -955,7 +1059,9 @@ initMagnetic();
 initHero();
 initSectionBackgrounds();
 initParallax();
+initHeroPeek();
 renderLatestAlbum();
 renderMural();
 renderTimeline();
+initFilmstripNav();
 observeReveals();

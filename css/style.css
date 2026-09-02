@@ -114,10 +114,28 @@ ul{ list-style:none; margin:0; padding:0; }
   padding: 1.5rem 5vw; transition: padding .4s var(--ease), background .4s var(--ease), backdrop-filter .4s var(--ease);
 }
 .nav.scrolled{
-  padding: 1rem 5vw; background: rgba(6,15,24,.78); backdrop-filter: blur(14px);
+  padding: 1rem 5vw; background: rgba(6,15,24,.5); backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(234,233,232,.08);
 }
 .nav__mark img{ height: 30px; }
+/* voltar + título do álbum aberto, direto na barra fixa — antes ficava
+   numa segunda barra grudada embaixo, duas faixas escuras empilhadas */
+.nav__album{ display:flex; align-items:center; gap: 1rem; min-width:0; }
+.nav__album:empty{ display:none; }
+.nav__album__back{
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--orange); flex-shrink: 0; transition: transform .25s var(--ease);
+  display:inline-flex; align-items:center; gap:.35rem;
+}
+.nav__album__back:hover{ transform: translateX(-4px); }
+.nav__album__title{
+  font-family: var(--font-display); font-weight:700; font-size: .98rem; margin:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 32vw;
+}
+@media (max-width: 780px){
+  .nav__album__title{ max-width: 34vw; font-size: .86rem; }
+  .nav__album__back{ font-size: .64rem; }
+}
 .nav__links{ display:flex; gap: 2.4rem; align-items:center; }
 .nav__links a{
   font-family: var(--font-mono); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase;
@@ -226,7 +244,11 @@ ul{ list-style:none; margin:0; padding:0; }
   background:
     radial-gradient(ellipse at 50% 46%, rgba(6,15,24,.74) 0%, rgba(6,15,24,.8) 48%, rgba(6,15,24,.95) 100%),
     linear-gradient(180deg, rgba(6,15,24,.65) 0%, rgba(6,15,24,.35) 26%, rgba(6,15,24,.6) 72%, var(--navy-black) 100%);
+  transition: opacity .55s var(--ease-soft);
 }
+/* passa o mouse na logo: ela e o degradê somem, revelando o mosaico puro */
+.hero.hero--peek .hero__vignette{ opacity: 0; }
+.hero.hero--peek .hero__logo-wrap{ opacity: 0; }
 .hero__grain{
   position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.06; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -243,6 +265,7 @@ ul{ list-style:none; margin:0; padding:0; }
   backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%);
   box-shadow: 0 30px 70px -24px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08);
   display:flex; flex-direction:column; overflow:hidden;
+  transition: opacity .55s var(--ease-soft);
 }
 .hero__logo-stage{ position:relative; width:100%; }
 .hero__logo{ width: 100%; filter: drop-shadow(0 10px 40px rgba(0,0,0,.5)); }
@@ -299,25 +322,6 @@ ul{ list-style:none; margin:0; padding:0; }
 .cat-tile.active img{ filter: saturate(1) brightness(.8); }
 .cat-tile.active .cat-tile__label{ color: var(--orange); font-weight:700; }
 
-/* header simples de navegação dentro de um álbum: voltar + título grande
-   (nada de trilha de migalhas — a maioria dos álbuns tem só 1 nível) */
-.board-nav{ display:flex; align-items:baseline; gap: 1.4rem; margin-bottom: 2rem; min-height: 1px; }
-.board-nav:empty{ margin-bottom: 0; }
-/* fica grudado embaixo do nav ao rolar — sem isso, "Voltar" e o nome do
-   álbum somem da tela assim que a pessoa desce pra ver as fotos */
-.board-nav:not(:empty){
-  position: sticky; top: 4.4rem; z-index: 90;
-  background: rgba(6,15,24,.82); backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid var(--glass-border); border-radius: 14px;
-  padding: .9rem 1.2rem; margin: 0 0 2rem;
-}
-.board-nav__back{
-  font-family: var(--font-mono); font-size: .78rem; letter-spacing: .05em; text-transform: uppercase;
-  color: var(--orange); flex-shrink: 0; transition: transform .25s var(--ease);
-  display:inline-flex; align-items:center; gap:.4rem;
-}
-.board-nav__back:hover{ transform: translateX(-4px); }
-.board-nav__title{ font-family: var(--font-display); font-weight:700; font-size: 1.6rem; margin:0; }
 .mural-divider{ font-family: var(--font-mono); font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color: rgba(234,233,232,.45); margin: 2.2rem 0 1.2rem; }
 .no-results{ color: rgba(234,233,232,.45); padding: 3rem 0; }
 
@@ -336,14 +340,15 @@ ul{ list-style:none; margin:0; padding:0; }
 .card{
   position:relative; margin:0; border-radius: var(--radius); overflow:hidden; cursor:pointer;
   aspect-ratio: 4 / 5; background: var(--navy);
-  opacity:0; transform: translateY(18px); transition: opacity .6s var(--ease-soft), transform .6s var(--ease-soft);
+  opacity:0; transform: translateY(56px) scale(.93);
+  transition: opacity .75s var(--ease-soft), transform .75s var(--ease-soft);
 }
 .card.in-view{ opacity:1; transform:none; }
 .card__media{ position:absolute; inset:0; }
 .card__media img{
   width:100%; height:100%; object-fit:cover; filter: saturate(.82) brightness(.82);
-  transform: scale(1.02) translateZ(0);
-  transition: transform .6s var(--ease), filter .5s var(--ease);
+  transform: scale(1.02) translateZ(0); opacity:1;
+  transition: transform .6s var(--ease), filter .5s var(--ease), opacity .3s var(--ease);
 }
 .card::after{
   content:""; position:absolute; inset:0; pointer-events:none;
@@ -436,15 +441,33 @@ ul{ list-style:none; margin:0; padding:0; }
    ordem cronológica do início até a mais recente), tipo Apple
    ============================================================ */
 .section--timeline .section__head{ margin-bottom: 3.5rem; }
+.filmstrip-wrap{ position:relative; }
 .filmstrip{
   width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;
   overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
 }
-.filmstrip__track{ display:flex; width: max-content; animation: filmstripScroll 90s linear infinite; }
-.filmstrip:hover .filmstrip__track{ animation-play-state: paused; }
-@keyframes filmstripScroll{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce){ .filmstrip__track{ animation: none; } }
+/* posição controlada via JS (transform inline) pra dar pra pausar no hover
+   e pular com as setas sem brigar com uma animação CSS por baixo */
+.filmstrip__track{ display:flex; width: max-content; will-change: transform; }
+@media (prefers-reduced-motion: reduce){ .filmstrip__track{ transform: none !important; } }
+
+.filmstrip__nav{
+  position:absolute; top:50%; z-index:6; width:46px; height:46px; border-radius:50%;
+  background: rgba(6,15,24,.55); border: 1px solid rgba(234,233,232,.18); color: var(--cream);
+  backdrop-filter: blur(10px) saturate(160%); -webkit-backdrop-filter: blur(10px) saturate(160%);
+  display:flex; align-items:center; justify-content:center;
+  transform: translateY(-50%); transition: background .25s var(--ease), border-color .25s var(--ease), color .25s var(--ease);
+}
+.filmstrip__nav svg{ width:20px; height:20px; }
+.filmstrip__nav:hover{ background: var(--orange); border-color: var(--orange); color: var(--navy-black); }
+.filmstrip__nav--prev{ left: 1.2rem; }
+.filmstrip__nav--next{ right: 1.2rem; }
+@media (max-width: 780px){
+  .filmstrip__nav{ width:38px; height:38px; }
+  .filmstrip__nav--prev{ left:.5rem; }
+  .filmstrip__nav--next{ right:.5rem; }
+}
 
 .filmreel{
   position:relative; flex-shrink:0; width: 340px; aspect-ratio: 3/2; margin-right: 14px;
@@ -467,6 +490,9 @@ ul{ list-style:none; margin:0; padding:0; }
 .filmreel__title{ font-family: var(--font-display); font-weight:700; font-size:.92rem; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .filmreel--marker{
   width: 180px; display:flex; align-items:center; justify-content:center; background: var(--navy-deep);
+  /* mais espaço antes (separa do ano anterior) e quase colado depois
+     (gruda no álbum do ano que ele está anunciando) */
+  margin-left: 28px; margin-right: 4px;
 }
 .filmreel--marker .filmreel__year{ font-family: var(--font-display); font-weight:800; font-size: 2.2rem; color: rgba(234,233,232,.18); }
 @media (max-width: 780px){

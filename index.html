@@ -23,6 +23,7 @@
 <!-- ===================== NAV ===================== -->
 <nav class="nav" id="nav">
   <a href="#inicio" class="nav__mark"><img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia"></a>
+  <div class="nav__album" id="navAlbum"></div>
   <button class="nav__toggle" id="navToggle" aria-label="Abrir menu"><span></span></button>
   <ul class="nav__links" id="navLinks">
     <li><a href="#mural" data-hover>Álbuns</a></li>
@@ -69,7 +70,6 @@
   </div>
 
   <div class="board reveal">
-    <div class="board-nav" id="breadcrumb"></div>
     <div id="folderZone"></div>
     <p class="mural-divider" id="photosDividerLabel" style="display:none;">Fotos deste álbum</p>
     <div class="card-grid" id="muralGrid"></div>
@@ -84,8 +84,16 @@
     <h2 class="section__title">Linha do Tempo</h2>
     <p class="section__desc">Do primeiro clique até o último — role o mouse ou passe o dedo.</p>
   </div>
-  <div class="filmstrip reveal" id="timeline">
-    <div class="filmstrip__track" id="filmstripTrack"></div>
+  <div class="filmstrip-wrap reveal">
+    <button class="filmstrip__nav filmstrip__nav--prev" id="filmstripPrev" aria-label="Ver período anterior" data-hover>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="filmstrip" id="timeline">
+      <div class="filmstrip__track" id="filmstripTrack"></div>
+    </div>
+    <button class="filmstrip__nav filmstrip__nav--next" id="filmstripNext" aria-label="Ver período seguinte" data-hover>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
   </div>
 </section>
 
