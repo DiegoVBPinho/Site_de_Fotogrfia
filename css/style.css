@@ -385,6 +385,29 @@ ul{ list-style:none; margin:0; padding:0; }
 .card--photo.card--landscape{ aspect-ratio: 4 / 3; }
 .card--photo.card--portrait{ aspect-ratio: 3 / 4; }
 
+/* ===== Álbum mais recente (destaque acima da grade) ===== */
+.latest-album{ margin-bottom: 3rem; }
+.latest-album__card{ aspect-ratio: 21 / 8; }
+.latest-album__overlay{
+  left: 1.2rem; right:auto; bottom: 1.2rem; max-width: min(560px, 80%);
+  padding: clamp(1.2rem, 2.4vw, 2rem); border-radius: calc(var(--radius) + 14px);
+}
+.latest-album__eyebrow{
+  font-family: var(--font-mono); font-size: .7rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--orange); margin: 0 0 .5rem;
+}
+.latest-album__title{
+  font-family: var(--font-display); font-weight: 800; margin: .15rem 0 .5rem;
+  font-size: clamp(1.4rem, 2.6vw, 2.2rem); line-height: 1.1;
+}
+.latest-album__date{
+  font-family: var(--font-mono); font-size: .78rem; letter-spacing: .03em; color: rgba(234,233,232,.85); margin: 0;
+}
+@media (max-width: 720px){
+  .latest-album__card{ aspect-ratio: 4 / 5; }
+  .latest-album__overlay{ right: 1.2rem; max-width: none; }
+}
+
 /* grade de FOTOS (retrato + paisagem misturados) — masonry montado em JS
    (layoutMasonry em main.js). CSS columns sozinho não dava: com poucas
    fotos ele "balanceava" em menos colunas do que cabia na tela, deixando

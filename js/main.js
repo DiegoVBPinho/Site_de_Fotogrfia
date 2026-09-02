@@ -533,6 +533,47 @@ function renderMural(){
   }
 }
 
+// ============================================================
+// Álbum mais recente (destaque antes da grade) — o de data mais
+// atual, não o "atualizado por último"
+// ============================================================
+function renderLatestAlbum(){
+  const el = $("#latestAlbum");
+  if (!el) return;
+  const candidates = ALBUMS
+    .filter(a => albumPhotos(a.id).length > 0)
+    .map(a => ({ album: a, date: albumOwnDate(a.id) }))
+    .filter(x => x.date)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!candidates.length){ el.innerHTML = ""; return; }
+
+  const { album: a, date } = candidates[0];
+  const parent = a.parent ? getAlbum(a.parent) : null;
+  const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
+  const count = albumPhotos(a.id).length;
+
+  el.innerHTML = `
+    <figure class="card latest-album__card" data-id="${a.id}" data-hover>
+      <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
+      <div class="card__overlay latest-album__overlay">
+        <p class="latest-album__eyebrow">Álbum mais recente</p>
+        ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
+        <h3 class="latest-album__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
+        <p class="latest-album__date">${formatDateLong(date)} · ${count} foto${count === 1 ? "" : "s"}</p>
+      </div>
+    </figure>
+  `;
+  stampApertures(el);
+  observeCards(el);
+  $(".card", el).addEventListener("click", () => {
+    navStack = breadcrumbFor(a.id).map(x => x.id);
+    searchQuery = ""; searchInput.value = "";
+    renderMural();
+    $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 function albumCardHTML(a){
   const kids = children(a.id);
   const isFolder = kids.length > 0;
@@ -914,6 +955,7 @@ initMagnetic();
 initHero();
 initSectionBackgrounds();
 initParallax();
+renderLatestAlbum();
 renderMural();
 renderTimeline();
 observeReveals();
