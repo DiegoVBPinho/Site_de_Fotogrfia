@@ -233,21 +233,17 @@ ul{ list-style:none; margin:0; padding:0; }
 .hero__content{ position:relative; z-index:3; padding: 0 4vw; width:100%; }
 .hero__kicker{
   font-family: var(--font-mono); font-size: .82rem; letter-spacing: .3em; text-transform: uppercase;
-  color: rgba(234,233,232,.7); margin: 0 0 1.4rem; text-shadow: 0 0 20px rgba(216,117,42,.5);
+  color: rgba(234,233,232,.7); margin: 0 0 1.4rem;
 }
 .hero__logo-wrap{
-  position:relative; max-width: min(1320px, 98vw); margin: 0 auto;
-  padding: clamp(1.6rem, 4.5vw, 3.6rem);
-  background: var(--glass-bg); border: 1px solid rgba(216,117,42,.35); border-radius: 28px;
+  position:relative; max-width: min(820px, 86vw); margin: 0 auto;
+  padding: clamp(1.4rem, 3.2vw, 2.4rem);
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 28px;
   backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%);
-  box-shadow:
-    0 40px 100px -24px rgba(0,0,0,.7),
-    inset 0 1px 0 rgba(255,255,255,.1),
-    0 0 0 1px rgba(216,117,42,.12),
-    0 0 90px -10px rgba(216,117,42,.45);
+  box-shadow: 0 30px 70px -24px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .hero__logo-stage{ position:relative; width:100%; }
-.hero__logo{ width: 100%; filter: drop-shadow(0 10px 40px rgba(0,0,0,.5)) drop-shadow(0 0 46px rgba(216,117,42,.28)); }
+.hero__logo{ width: 100%; filter: drop-shadow(0 10px 40px rgba(0,0,0,.5)); }
 .hero__scroll{
   position:absolute; z-index:3; bottom: 2.4rem; left:50%; transform: translateX(-50%);
   font-family: var(--font-mono); font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
