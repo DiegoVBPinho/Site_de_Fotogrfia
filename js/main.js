@@ -409,7 +409,11 @@ function renderMural(){
       const rest = g.photos.length - shown.length;
       return `
         <div class="mobile-album-block" data-group="${g.album ? g.album.id : ""}">
-          ${showTitles && g.album ? `<p class="mobile-album-block__title">${g.album.titulo}${g.album.subtitulo ? " — " + g.album.subtitulo : ""}</p>` : ""}
+          ${showTitles && g.album ? (() => {
+            const parent = g.album.parent ? getAlbum(g.album.parent) : null;
+            const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
+            return `<p class="mobile-album-block__title">${parentLabel ? `<span class="mobile-album-block__parent">${parentLabel}</span>` : ""}${g.album.titulo}${g.album.subtitulo ? " — " + g.album.subtitulo : ""}</p>`;
+          })() : ""}
           <div class="mobile-album-block__frames">${shown.map(p => photoCardHTML(p)).join("")}</div>
           ${rest > 0 ? `<button class="mobile-album-block__more" data-group="${g.album ? g.album.id : ""}" data-hover>Ver mais ${rest} foto${rest === 1 ? "" : "s"} <span class="aperture"></span></button>` : ""}
         </div>`;
@@ -434,7 +438,7 @@ function renderMural(){
   // raiz: TODOS os álbuns com foto própria, de qualquer nível, em ordem
   // alfabética — nada de esconder sub-álbum atrás de clique em pasta
   let childAlbums = currentParent === null
-    ? ALBUMS.filter(a => albumHasContent(a.id)).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"))
+    ? ALBUMS.filter(a => albumPhotos(a.id).length > 0).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"))
     : sortAlbumsByDate(children(currentParent));
   const ownPhotos = currentParent ? albumPhotos(currentParent) : [];
 
@@ -479,11 +483,16 @@ function albumCardHTML(a){
   const isFolder = kids.length > 0;
   const count = isFolder ? kids.length : albumPhotos(a.id).length;
   const countLabel = isFolder ? `${count} álbum${count === 1 ? "" : "s"}` : `${count} foto${count === 1 ? "" : "s"}`;
+  // sem a árvore de navegação, o card precisa dizer sozinho de onde é —
+  // "Júlia" sem contexto não diz nada; "Júlia" + "Maquiagem" diz
+  const parent = a.parent ? getAlbum(a.parent) : null;
+  const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
   return `
     <figure class="card" data-id="${a.id}" data-hover>
       <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
       <div class="card__overlay">
         <span class="card__count">${countLabel}</span>
+        ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
         <h3 class="card__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
       </div>
     </figure>
