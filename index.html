@@ -84,7 +84,7 @@
   <div class="filters reveal" id="filters"></div>
 
   <div class="board reveal">
-    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="board-nav" id="breadcrumb"></div>
     <div id="folderZone"></div>
     <p class="mural-divider" id="photosDividerLabel" style="display:none;">Fotos deste álbum</p>
     <div class="card-grid" id="muralGrid"></div>
@@ -92,13 +92,15 @@
 </section>
 
 <!-- ===================== LINHA DO TEMPO ===================== -->
-<section class="section" id="tempo">
+<section class="section section--timeline" id="tempo">
   <div class="section__head reveal">
     <p class="eyebrow">Cronologia</p>
     <h2 class="section__title">Linha do Tempo</h2>
-    <p class="section__desc">Cada álbum aparece pela data da sua primeira foto.</p>
+    <p class="section__desc">Do primeiro clique até o último — role o mouse ou passe o dedo.</p>
   </div>
-  <div class="timeline reveal" id="timeline"></div>
+  <div class="filmstrip reveal" id="timeline">
+    <div class="filmstrip__track" id="filmstripTrack"></div>
+  </div>
 </section>
 
 <!-- ===================== SOBRE MIM ===================== -->

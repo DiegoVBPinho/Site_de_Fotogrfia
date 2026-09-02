@@ -390,27 +390,25 @@ function renderFilters(){
   });
 }
 
+// header simples: "← Voltar" + título do álbum atual — nada de trilha de
+// migalhas (a maioria dos álbuns só tem 1 nível de profundidade mesmo)
 function renderBreadcrumb(){
-  if (isMobileView() && !searchQuery && !navStack.length){
+  if (searchQuery){
+    breadcrumbEl.innerHTML = `<h3 class="board-nav__title">Resultados da busca "${searchQuery}"</h3>`;
+    return;
+  }
+  if (!navStack.length){
     breadcrumbEl.innerHTML = "";
     return;
   }
-  if (searchQuery){
-    breadcrumbEl.innerHTML = `<span class="crumb">Resultados da busca "${searchQuery}"</span>`;
-    return;
-  }
-  const chain = navStack.map(id => getAlbum(id));
-  let html = `<button data-idx="-1">Mural</button>`;
-  chain.forEach((a, i) => {
-    html += `<span class="sep">/</span><button data-idx="${i}">${a.titulo}</button>`;
-  });
-  breadcrumbEl.innerHTML = html;
-  $$("button", breadcrumbEl).forEach(btn => {
-    btn.addEventListener("click", () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      navStack = idx === -1 ? resolveSingleAlbumChain(activeCategory) : navStack.slice(0, idx + 1);
-      renderMural();
-    });
+  const current = getAlbum(navStack[navStack.length - 1]);
+  breadcrumbEl.innerHTML = `
+    <button class="board-nav__back" id="boardBack" data-hover>← Voltar</button>
+    <h3 class="board-nav__title">${current.titulo}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
+  `;
+  $("#boardBack").addEventListener("click", () => {
+    navStack = navStack.length > 1 ? navStack.slice(0, -1) : resolveSingleAlbumChain(activeCategory);
+    renderMural();
   });
 }
 
@@ -505,7 +503,7 @@ function renderMural(){
   if (childAlbums.length){
     folderZone.innerHTML = `
       ${ownPhotos.length ? `<p class="mural-divider">Álbuns dentro deste álbum</p>` : ""}
-      <div class="card-grid card-grid--albums" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
+      <div class="card-grid card-grid--albums ${currentParent === null ? "card-grid--top" : ""}" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
         ${childAlbums.map(a => albumCardHTML(a)).join("")}
       </div>
     `;
@@ -576,95 +574,42 @@ searchClear.addEventListener("click", () => {
 // ============================================================
 // Linha do tempo
 // ============================================================
-let timelineRevealCount = 1;
-const TIMELINE_STEP = 3;
-
-const timelineObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting){
-      entry.target.classList.add("in-view");
-      timelineObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.12 });
-
+// faixa horizontal e infinita, do álbum mais antigo pro mais recente —
+// substitui os cards parados por algo que rola sozinho, tipo Apple
 function renderTimeline(){
-  const el = $("#timeline");
+  const track = $("#filmstripTrack");
   const dated = ALBUMS
     .filter(a => a.categoria !== "retratos" && a.parent === null)
     .map(a => ({ album: a, date: albumEffectiveDate(a.id) }))
     .filter(x => x.date)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => new Date(a.date) - new Date(b.date)); // do começo até a data mais atual
 
-  const visible = dated.slice(0, timelineRevealCount);
+  if (!dated.length){ track.innerHTML = ""; return; }
 
-  const groups = [];
-  const byMonth = new Map();
-  visible.forEach(({ album: a, date }) => {
-    const key = date.slice(0, 7);
-    if (!byMonth.has(key)){
-      byMonth.set(key, { label: formatMonthYearFull(date), items: [] });
-      groups.push(byMonth.get(key));
+  let lastYear = null;
+  const reels = [];
+  dated.forEach(({ album: a, date }) => {
+    const year = date.slice(0, 4);
+    if (year !== lastYear){
+      reels.push(`<div class="filmreel filmreel--marker"><span class="filmreel__year">${year}</span></div>`);
+      lastYear = year;
     }
-    byMonth.get(key).items.push({ album: a, date });
+    reels.push(`
+      <figure class="filmreel" data-id="${a.id}" data-hover>
+        <img src="${a.cover}" alt="${a.titulo}" loading="lazy">
+        <figcaption class="filmreel__cap">
+          <p class="filmreel__date">${formatDateShort(date)}</p>
+          <p class="filmreel__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</p>
+        </figcaption>
+      </figure>
+    `);
   });
 
-  el.innerHTML = groups.map(g => `
-    <div class="timeline-group">
-      <p class="timeline-group__label">${g.label}</p>
-      <div class="timeline-group__grid">
-        ${g.items.map(({ album: a, date }) => {
-          const kidsCount = children(a.id).length;
-          const count = albumPhotosRecursive(a.id).length;
-          return `
-            <div class="timeline__item" data-id="${a.id}">
-              <div class="timeline__card" data-hover>
-                <div class="timeline__thumb"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
-                <div class="timeline__body">
-                  <p class="timeline__date">${formatDateShort(date)}</p>
-                  <p class="timeline__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</p>
-                  ${kidsCount ? `<p class="timeline__meta">${kidsCount} Álbum${kidsCount === 1 ? "" : "s"} Interno${kidsCount === 1 ? "" : "s"}</p>` : ""}
-                  <p class="timeline__meta">${count} foto${count === 1 ? "" : "s"}</p>
-                  <button class="timeline__view-btn" data-id="${a.id}">Ver álbum <span class="aperture"></span></button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `).join("");
-  stampApertures(el);
-  $$(".timeline__item", el).forEach((item, i) => {
-    item.style.transitionDelay = (Math.min(i, 6) * 0.08).toFixed(2) + "s";
-    timelineObserver.observe(item);
-  });
-
-  const buttons = [];
-  if (dated.length > visible.length){
-    buttons.push(`<button class="timeline__more" id="timelineMore" data-hover>Mostrar mais</button>`);
-  }
-  if (timelineRevealCount > 1){
-    buttons.push(`<button class="timeline__more timeline__more--less" id="timelineLess" data-hover>Mostrar menos</button>`);
-  }
-  if (buttons.length){
-    el.insertAdjacentHTML("beforeend", `<div class="timeline__actions">${buttons.join("")}</div>`);
-    const moreBtn = $("#timelineMore");
-    const lessBtn = $("#timelineLess");
-    if (moreBtn) moreBtn.addEventListener("click", () => {
-      timelineRevealCount += TIMELINE_STEP;
-      renderTimeline();
-    });
-    if (lessBtn) lessBtn.addEventListener("click", () => {
-      timelineRevealCount = 1;
-      renderTimeline();
-      $("#tempo").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  $$(".timeline__item", el).forEach(item => {
-    item.addEventListener("click", () => {
-      navStack = breadcrumbFor(item.dataset.id).map(a => a.id);
+  // duplica a sequência pra loop sem costura (a animação anda 50% e volta pro início igualzinho)
+  track.innerHTML = reels.join("") + reels.join("");
+  $$(".filmreel[data-id]", track).forEach(reel => {
+    reel.addEventListener("click", () => {
+      navStack = breadcrumbFor(reel.dataset.id).map(a => a.id);
       searchQuery = ""; searchInput.value = "";
       renderMural();
       $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
