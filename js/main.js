@@ -429,22 +429,38 @@ function renderMural(){
   }
 
   if (searchQuery){
+    // busca filtra ÁLBUNS (igual a listagem normal), não uma parede de
+    // fotos soltas — digitar "bru" já mostra o álbum "Bruna Viola"
     searchClear.style.display = "inline";
-    const items = PHOTOS.filter(p =>
-      photoMatchesCategory(p, activeCategory) &&
-      matchesSearch(p, searchQuery)
-    );
-    if (!items.length){
-      muralGrid.innerHTML = `<p class="no-results">Nenhuma foto encontrada para "${searchQuery}".</p>`;
+    muralGrid.className = "card-grid";
+    muralGrid.innerHTML = "";
+    const matches = ALBUMS
+      .filter(a => albumPhotos(a.id).length > 0)
+      .filter(a => {
+        const titleHay = `${a.titulo} ${a.subtitulo || ""}`.toLowerCase();
+        if (titleHay.includes(searchQuery.trim().toLowerCase())) return true;
+        return albumPhotos(a.id).some(p => matchesSearch(p, searchQuery));
+      })
+      .sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
+
+    if (!matches.length){
+      folderZone.innerHTML = `<p class="no-results">Nenhum álbum encontrado para "${searchQuery}".</p>`;
       return;
     }
-    muralGrid.className = "card-grid card-grid--photos";
-    muralGrid.innerHTML = items.map(p => photoCardHTML(p)).join("");
-    applyOrientationClasses(muralGrid);
-    layoutMasonry(muralGrid);
-    observeCards(muralGrid);
-    $$(".card", muralGrid).forEach(el => {
-      el.addEventListener("click", () => openLightbox(items, items.findIndex(p => p.id === el.dataset.id)));
+    folderZone.innerHTML = `
+      <div class="card-grid card-grid--albums card-grid--top">
+        ${matches.map(a => albumCardHTML(a)).join("")}
+      </div>
+    `;
+    stampApertures(folderZone);
+    observeCards(folderZone);
+    $$(".card", folderZone).forEach(el => {
+      el.addEventListener("click", () => {
+        navStack.push(el.dataset.id);
+        searchQuery = ""; searchInput.value = "";
+        renderMural();
+        $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     });
     return;
   }

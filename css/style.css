@@ -114,7 +114,7 @@ ul{ list-style:none; margin:0; padding:0; }
   padding: 1.5rem 5vw; transition: padding .4s var(--ease), background .4s var(--ease), backdrop-filter .4s var(--ease);
 }
 .nav.scrolled{
-  padding: 1rem 5vw; background: rgba(6,15,24,.5); backdrop-filter: blur(14px);
+  padding: 1rem 5vw; background: rgba(6,15,24,.68); backdrop-filter: blur(18px) saturate(140%);
   border-bottom: 1px solid rgba(234,233,232,.08);
 }
 .nav__mark img{ height: 30px; }
@@ -291,9 +291,9 @@ ul{ list-style:none; margin:0; padding:0; }
 .search-bar--nav{
   display:flex; align-items:center; gap:.5rem; width: 190px;
   padding: .5rem .85rem; border-radius: 999px; color: rgba(234,233,232,.5);
-  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  background: rgba(6,15,24,.55); border: 1px solid var(--glass-border);
   backdrop-filter: blur(14px) saturate(160%); -webkit-backdrop-filter: blur(14px) saturate(160%);
-  transition: border-color .3s var(--ease);
+  transition: border-color .3s var(--ease), background .3s var(--ease);
 }
 .search-bar:focus-within{ border-color: var(--orange); color: var(--cream); }
 .search-bar .aperture{ color: var(--orange); flex-shrink:0; width: .85em; height: .85em; }
