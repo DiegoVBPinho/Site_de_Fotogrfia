@@ -27,13 +27,16 @@ function formatMonthYearFull(iso){
 // Dados — navegação da árvore de álbuns (puro, sem DOM)
 // ============================================================
 function getAlbum(id){ return ALBUMS.find(a => a.id === id); }
-function children(parentId){ return ALBUMS.filter(a => a.parent === parentId); }
+// só entra na navegação quem tem foto de verdade (direta ou nos sub-álbuns) —
+// álbum/categoria vazio nunca aparece pro visitante
+function children(parentId){ return ALBUMS.filter(a => a.parent === parentId && albumHasContent(a.id)); }
 function albumPhotos(id){ return PHOTOS.filter(p => p.album === id); }
 function albumPhotosRecursive(id){
   let list = albumPhotos(id);
-  children(id).forEach(c => { list = list.concat(albumPhotosRecursive(c.id)); });
+  ALBUMS.filter(a => a.parent === id).forEach(c => { list = list.concat(albumPhotosRecursive(c.id)); });
   return list;
 }
+function albumHasContent(id){ return albumPhotosRecursive(id).length > 0; }
 function breadcrumbFor(albumId){
   const chain = [];
   let current = getAlbum(albumId);
@@ -192,25 +195,72 @@ async function buildHeroPool(){
   if (!heroPool.length) heroPool = shuffled.slice(0, 10);
 }
 
-function initHeroBg(){
-  const el = $("#heroBg");
-  if (!heroPool.length){ return; }
-  const imgs = heroPool.slice(0, 8).map((p, i) => {
-    const img = document.createElement("img");
-    img.src = p.src; img.alt = p.titulo || "";
-    img.loading = i === 0 ? "eager" : "lazy";
-    el.appendChild(img);
-    return img;
+// ------------------------------------------------------------
+// Mosaico do hero — grade que nunca para: entra em "gota d'água"
+// (atraso cresce do centro pras bordas), flutua sozinha depois de
+// assentar, e troca fotos aos poucos em tiles aleatórios pra ficar viva.
+// ------------------------------------------------------------
+function computeHeroGrid(){
+  const w = window.innerWidth, h = window.innerHeight;
+  const mobile = w < 640;
+  const targetCell = mobile ? 90 : 150;
+  const cols = Math.max(mobile ? 4 : 7, Math.min(mobile ? 6 : 14, Math.round(w / targetCell)));
+  const rows = Math.max(mobile ? 7 : 5, Math.min(mobile ? 10 : 8, Math.round(h / targetCell)));
+  return { cols, rows };
+}
+
+function initHeroMosaic(){
+  const el = $("#heroMosaic");
+  const pool = (PHOTOS.length ? PHOTOS : heroPool).filter(Boolean);
+  if (!pool.length) return;
+  const { cols, rows } = computeHeroGrid();
+  const cells = cols * rows;
+  el.style.setProperty("--hero-cols", cols);
+  el.style.setProperty("--hero-rows", rows);
+
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const picks = [];
+  while (picks.length < cells) picks.push(shuffled[picks.length % shuffled.length]);
+
+  const RIPPLE_START = 0.05, RIPPLE_SPREAD = 0.85;
+  const centerRow = (rows - 1) / 2, centerCol = (cols - 1) / 2;
+  const maxDist = Math.hypot(centerRow, centerCol) || 1;
+
+  el.innerHTML = "";
+  const tiles = picks.map((p, idx) => {
+    const row = Math.floor(idx / cols), col = idx % cols;
+    const dist = Math.hypot(row - centerRow, col - centerCol) / maxDist;
+    const delay = REDUCE_MOTION ? 0 : (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.1);
+    const fig = document.createElement("figure");
+    fig.className = "hero__tile";
+    fig.style.transitionDelay = delay.toFixed(2) + "s";
+    fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
+    el.appendChild(fig);
+    return fig;
   });
-  let i = 0;
-  imgs[0].classList.add("is-active");
-  if (imgs.length > 1 && !REDUCE_MOTION){
-    setInterval(() => {
-      imgs[i].classList.remove("is-active");
-      i = (i + 1) % imgs.length;
-      imgs[i].classList.add("is-active");
-    }, 6500);
-  }
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    tiles.forEach(t => t.classList.add("in-view"));
+  }));
+
+  const heroEl = $("#inicio");
+  const contentDelayMs = (RIPPLE_START + RIPPLE_SPREAD + 0.6) * 1000;
+  setTimeout(() => { $("#heroContent").classList.add("is-visible"); }, REDUCE_MOTION ? 0 : contentDelayMs);
+
+  if (REDUCE_MOTION) return;
+  // troca fotos aos poucos em alguns tiles aleatórios — mantém o mosaico vivo sem nunca ficar igual
+  setInterval(() => {
+    if (!heroEl || heroEl.getBoundingClientRect().bottom < 0) return; // fora da tela, poupa trabalho
+    const n = Math.max(1, Math.round(tiles.length * 0.06));
+    for (let i = 0; i < n; i++){
+      const tile = tiles[Math.floor(Math.random() * tiles.length)];
+      const img = tile.querySelector("img");
+      if (!img) continue;
+      const next = shuffled[Math.floor(Math.random() * shuffled.length)];
+      img.classList.add("is-fading");
+      setTimeout(() => { img.src = next.src; img.classList.remove("is-fading"); }, 500);
+    }
+  }, 1400);
 }
 
 function initViewfinder(){
@@ -264,8 +314,8 @@ function initViewfinder(){
 }
 
 async function initHero(){
+  initHeroMosaic();
   await buildHeroPool();
-  initHeroBg();
   initViewfinder();
 }
 
@@ -323,7 +373,8 @@ function matchesSearch(p, query){
 }
 
 function renderFilters(){
-  filtersEl.innerHTML = CATEGORIAS.map(c => `
+  const categoriasComConteudo = CATEGORIAS.filter(c => c.id === "todos" || PHOTOS.some(p => photoMatchesCategory(p, c.id)));
+  filtersEl.innerHTML = categoriasComConteudo.map(c => `
     <button class="filter-chip ${c.id === activeCategory ? "active" : ""}" data-cat="${c.id}">
       <span class="aperture"></span> ${c.label}
     </button>
@@ -798,6 +849,7 @@ if (tabbarItems.length){
 // ============================================================
 let lastWasMobile = isMobileView();
 let resizeTimer = null;
+let lastHeroGrid = computeHeroGrid();
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
@@ -805,6 +857,11 @@ window.addEventListener("resize", () => {
     if (nowMobile !== lastWasMobile){
       lastWasMobile = nowMobile;
       renderMural();
+    }
+    const nextGrid = computeHeroGrid();
+    if (nextGrid.cols !== lastHeroGrid.cols || nextGrid.rows !== lastHeroGrid.rows){
+      lastHeroGrid = nextGrid;
+      initHeroMosaic();
     }
   }, 200);
 });

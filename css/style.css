@@ -153,17 +153,40 @@ ul{ list-style:none; margin:0; padding:0; }
   align-items:center; justify-content:center; text-align:center; overflow:hidden;
   background: var(--navy-black);
 }
-.hero__bg{ position:absolute; inset:0; z-index:0; }
-.hero__bg img{
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-  opacity:0; transform: scale(1.08); transition: opacity 1.6s var(--ease-soft), transform 9s linear;
+/* mosaico do hero — grade de fotos que nunca para: entra em "gota d'água"
+   (atraso cresce do centro pras bordas) e depois de assentar continua viva,
+   com leve flutuação e trocas de foto escalonadas pelo grid */
+.hero__mosaic{
+  position:absolute; inset:0; z-index:0; display:grid;
+  grid-template-columns: repeat(var(--hero-cols, 8), 1fr);
+  grid-template-rows: repeat(var(--hero-rows, 5), 1fr);
+  gap: 2px;
 }
-.hero__bg img.is-active{ opacity: 1; transform: scale(1); }
+.hero__tile{ position:relative; overflow:hidden; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
+.hero__tile.in-view{ opacity: 1; transform: scale(1); }
+.hero__tile-inner{ position:absolute; inset:-6%; animation: heroFloat var(--fd, 7s) ease-in-out infinite; animation-delay: var(--fdd, 0s); }
+.hero__tile img{
+  width:100%; height:100%; object-fit:cover; filter: saturate(1.05) brightness(.85) contrast(1.05);
+  opacity: 1; transition: opacity .9s var(--ease-soft);
+}
+.hero__tile img.is-fading{ opacity: 0; }
+@keyframes heroFloat{
+  0%, 100%{ transform: translate(0,0) scale(1); }
+  50%{ transform: translate(var(--fx,6px), var(--fy,-8px)) scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce){
+  .hero__tile{ opacity:1; transform:none; transition:none; }
+  .hero__tile-inner{ animation:none; }
+}
+
+/* logo entra por cima do mosaico só depois dele assentar */
+.hero__content{ opacity:0; transform: translateY(14px); transition: opacity 1.1s var(--ease-soft), transform 1.1s var(--ease-soft); }
+.hero__content.is-visible{ opacity:1; transform:none; }
 .hero__vignette{
   position:absolute; inset:0; z-index:1; pointer-events:none;
   background:
-    radial-gradient(ellipse at 50% 40%, rgba(6,15,24,.15) 0%, rgba(6,15,24,.72) 68%, rgba(6,15,24,.94) 100%),
-    linear-gradient(180deg, rgba(6,15,24,.55) 0%, rgba(6,15,24,.25) 30%, rgba(6,15,24,.55) 72%, var(--navy-black) 100%);
+    radial-gradient(ellipse at 50% 46%, rgba(6,15,24,.55) 0%, rgba(6,15,24,.6) 48%, rgba(6,15,24,.9) 100%),
+    linear-gradient(180deg, rgba(6,15,24,.5) 0%, rgba(6,15,24,.15) 26%, rgba(6,15,24,.45) 72%, var(--navy-black) 100%);
 }
 .hero__grain{
   position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.06; mix-blend-mode: overlay;
