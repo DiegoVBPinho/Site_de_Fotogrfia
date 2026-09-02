@@ -238,12 +238,15 @@ function initHeroMosaic(){
   const targetHeight = window.innerHeight * cols * 1.35;
   el.innerHTML = "";
   const tiles = [];
+  // nunca repete foto no mosaico — anda pelo array embaralhado sem
+  // módulo, e para de encher se o acervo acabar (não dá voltinha)
   let i = 0, accHeight = 0;
-  while (accHeight < targetHeight && i < 500){
-    const p = shuffled[i % shuffled.length];
+  while (accHeight < targetHeight && i < 500 && i < shuffled.length){
+    const p = shuffled[i];
     const ratio = HERO_RATIOS[Math.floor(Math.random() * HERO_RATIOS.length)];
     const fig = document.createElement("figure");
     fig.className = "hero__tile";
+    fig.dataset.photoId = p.id;
     fig.style.aspectRatio = ratio;
     fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
     el.appendChild(fig);
@@ -277,18 +280,26 @@ function initHeroMosaic(){
 
   if (REDUCE_MOTION) return;
   const heroEl = $("#inicio");
-  // troca fotos aos poucos em tiles aleatórios — mantém o mosaico vivo sem nunca ficar igual
+  // troca fotos aos poucos em tiles aleatórios — mantém o mosaico vivo sem
+  // nunca ficar igual E sem nunca repetir foto entre dois tiles ao mesmo
+  // tempo (só entram fotos que não estão em nenhum outro tile agora)
   setInterval(() => {
     if (!heroEl || heroEl.getBoundingClientRect().bottom < 0) return; // fora da tela, poupa trabalho
     const n = Math.max(1, Math.round(tiles.length * 0.06));
-    for (let i = 0; i < n; i++){
-      const tile = tiles[Math.floor(Math.random() * tiles.length)];
+    const tileOrder = [...tiles.keys()].sort(() => Math.random() - 0.5).slice(0, n);
+    const displayedIds = new Set(tiles.map(t => t.dataset.photoId));
+    const available = shuffled.filter(p => !displayedIds.has(p.id)).sort(() => Math.random() - 0.5);
+    let ai = 0;
+    tileOrder.forEach(idx => {
+      if (ai >= available.length) return; // acabaram as fotos livres pra essa rodada
+      const tile = tiles[idx];
       const img = tile.querySelector("img");
-      if (!img) continue;
-      const next = shuffled[Math.floor(Math.random() * shuffled.length)];
+      if (!img) return;
+      const next = available[ai++];
+      tile.dataset.photoId = next.id;
       img.classList.add("is-fading");
       setTimeout(() => { img.src = next.src; img.classList.remove("is-fading"); }, 500);
-    }
+    });
   }, 1400);
 }
 

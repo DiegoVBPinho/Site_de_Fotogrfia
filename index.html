@@ -24,13 +24,20 @@
 <nav class="nav" id="nav">
   <a href="#inicio" class="nav__mark"><img src="images/brand/logo-white-transparent.png" alt="Diego Victor Fotografia"></a>
   <div class="nav__album" id="navAlbum"></div>
+  <div class="nav__right">
+    <div class="search-bar search-bar--nav">
+      <span class="aperture"></span>
+      <input type="text" id="searchInput" placeholder="Buscar...">
+      <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
+    </div>
+    <ul class="nav__links" id="navLinks">
+      <li><a href="#mural" data-hover>Álbuns</a></li>
+      <li><a href="#tempo" data-hover>Linha do Tempo</a></li>
+      <li><a href="#sobre" data-hover>Sobre mim</a></li>
+      <li><a href="#contato" data-hover>Contato</a></li>
+    </ul>
+  </div>
   <button class="nav__toggle" id="navToggle" aria-label="Abrir menu"><span></span></button>
-  <ul class="nav__links" id="navLinks">
-    <li><a href="#mural" data-hover>Álbuns</a></li>
-    <li><a href="#tempo" data-hover>Linha do Tempo</a></li>
-    <li><a href="#sobre" data-hover>Sobre mim</a></li>
-    <li><a href="#contato" data-hover>Contato</a></li>
-  </ul>
 </nav>
 
 <!-- ===================== HERO ===================== -->
@@ -60,13 +67,8 @@
 <section class="section" id="mural">
   <div class="section__bg" id="muralBg"></div>
   <div class="latest-album" id="latestAlbum"></div>
-  <div class="section__head section__head--row reveal">
+  <div class="section__head reveal">
     <h2 class="section__title">Álbuns de Fotos</h2>
-    <div class="search-bar search-bar--float">
-      <span class="aperture"></span>
-      <input type="text" id="searchInput" placeholder="Buscar...">
-      <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
-    </div>
   </div>
 
   <div class="board reveal">
