@@ -374,6 +374,12 @@ function renderMural(){
   photosDividerLabel.style.display = "none";
   muralGrid.className = "card-grid";
 
+  const openAlbumId = navStack.length ? navStack[navStack.length - 1] : null;
+  if (openAlbumId !== muralBgAlbumId){
+    muralBgAlbumId = openAlbumId;
+    setMuralBackground(openAlbumId);
+  }
+
   if (searchQuery){
     searchClear.style.display = "inline";
     const items = PHOTOS.filter(p =>
@@ -778,7 +784,6 @@ function observeReveals(){ $$(".reveal").forEach(el => io.observe(el)); }
 // ============================================================
 function initSectionBackgrounds(){
   const targets = [
-    { id: "muralBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
     { id: "tempoBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
     { id: "sobreBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
     { id: "contatoBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
@@ -791,11 +796,35 @@ function initSectionBackgrounds(){
     img.src = photo.src; img.alt = ""; img.loading = "lazy";
     el.appendChild(img);
   });
+  setMuralBackground(null);
+}
+
+// ------------------------------------------------------------
+// Fundo do mural é sempre do álbum que tá aberto — troca pra outra foto
+// do mesmo álbum conforme a pessoa rola a página (não fica parado)
+// ------------------------------------------------------------
+let muralBgPool = [];
+let muralBgIndex = 0;
+let muralBgLastSwapY = null;
+let muralBgAlbumId = undefined;
+
+function setMuralBackground(albumId){
+  const pool = albumId ? albumPhotosRecursive(albumId) : PHOTOS;
+  muralBgPool = [...(pool.length ? pool : PHOTOS)].sort(() => Math.random() - 0.5).slice(0, 8);
+  muralBgIndex = 0;
+  muralBgLastSwapY = null;
+  const el = document.getElementById("muralBg");
+  if (!el || !muralBgPool.length) return;
+  let img = el.querySelector("img");
+  if (!img){ img = document.createElement("img"); img.loading = "lazy"; el.appendChild(img); el.dataset.ready = "1"; }
+  img.style.opacity = 1;
+  img.src = muralBgPool[0].src;
 }
 
 function initParallax(){
   const layers = $$(".section__bg img");
   if (!layers.length || REDUCE_MOTION) return;
+  const muralSection = document.getElementById("mural");
   function tick(){
     const vh = window.innerHeight;
     layers.forEach(img => {
@@ -805,6 +834,24 @@ function initParallax(){
       const dist = (center - vh / 2) / vh;
       img.style.transform = `translateY(${(dist * 70).toFixed(1)}px)`;
     });
+
+    if (muralSection && muralBgPool.length > 1){
+      const r = muralSection.getBoundingClientRect();
+      const scrolled = -r.top;
+      if (r.top < vh && r.bottom > 0){
+        if (muralBgLastSwapY === null) muralBgLastSwapY = scrolled;
+        else if (Math.abs(scrolled - muralBgLastSwapY) > 650){
+          muralBgLastSwapY = scrolled;
+          muralBgIndex = (muralBgIndex + 1) % muralBgPool.length;
+          const img = document.querySelector("#muralBg img");
+          const next = muralBgPool[muralBgIndex];
+          if (img && next){
+            img.style.opacity = 0;
+            setTimeout(() => { img.src = next.src; img.style.opacity = 1; }, 260);
+          }
+        }
+      }
+    }
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
