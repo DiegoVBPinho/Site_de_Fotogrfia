@@ -507,9 +507,11 @@ function albumCardHTML(a){
     <figure class="card" data-id="${a.id}" data-hover>
       <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
       <div class="card__overlay">
-        <span class="card__count">${countLabel}</span>
         ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
-        <h3 class="card__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
+        <div class="card__row">
+          <h3 class="card__title">${a.titulo}</h3>
+          <span class="card__count">${countLabel}</span>
+        </div>
       </div>
     </figure>
   `;
@@ -566,8 +568,8 @@ function renderTimeline(){
       <figure class="filmreel" data-id="${a.id}" data-hover>
         <img src="${a.cover}" alt="${a.titulo}" loading="lazy">
         <figcaption class="filmreel__cap">
+          <p class="filmreel__title">${a.titulo}</p>
           <p class="filmreel__date">${formatDateShort(date)}</p>
-          <p class="filmreel__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</p>
         </figcaption>
       </figure>
     `);
