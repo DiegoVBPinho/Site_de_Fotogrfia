@@ -179,50 +179,60 @@ function initMagnetic(){
 // peças do mesmo tamanho encaixadas lado a lado até completar o
 // hero inteiro, sem parar: flutua e troca foto sozinho depois.
 // ============================================================
-function computeHeroGrid(){
-  const w = window.innerWidth, h = window.innerHeight;
-  const mobile = w < 640;
-  const targetCell = mobile ? 95 : 165;
-  const cols = Math.max(mobile ? 4 : 6, Math.min(mobile ? 6 : 13, Math.round(w / targetCell)));
-  const rows = Math.max(mobile ? 7 : 4, Math.min(mobile ? 10 : 8, Math.round(h / targetCell)));
-  return { cols, rows };
+function computeHeroColWidth(){
+  return window.innerWidth < 640 ? 130 : 190;
 }
+// tamanhos variados (retrato/paisagem/quadrada) igual à grade de fotos do
+// álbum — masonry de verdade via CSS columns, sem gap, cobrindo o hero
+// inteiro de ponta a ponta ("peça encaixa na outra até completar tudo")
+const HERO_RATIOS = [3/4, 4/3, 1, 2/3, 3/2, 4/5];
 
 function initHeroMosaic(){
   const el = $("#heroMosaic");
   const pool = PHOTOS.filter(Boolean);
   if (!pool.length) return;
-  const { cols, rows } = computeHeroGrid();
-  const cells = cols * rows;
-  el.style.setProperty("--hero-cols", cols);
-  el.style.setProperty("--hero-rows", rows);
+  const colWidth = computeHeroColWidth();
+  el.style.setProperty("--hero-colw", colWidth + "px");
 
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const picks = [];
-  while (picks.length < cells) picks.push(shuffled[picks.length % shuffled.length]);
-
-  const RIPPLE_START = 0.05, RIPPLE_SPREAD = 0.85;
-  const centerRow = (rows - 1) / 2, centerCol = (cols - 1) / 2;
-  const maxDist = Math.hypot(centerRow, centerCol) || 1;
-
+  const cols = Math.max(3, Math.round(window.innerWidth / colWidth));
+  // preenche até dar mais que a altura da tela (com folga) — melhor sobrar
+  // embaixo do que faltar tile e abrir buraco no fim do mosaico
+  const targetHeight = window.innerHeight * cols * 1.35;
   el.innerHTML = "";
-  const tiles = picks.map((p, idx) => {
-    const row = Math.floor(idx / cols), col = idx % cols;
-    const dist = Math.hypot(row - centerRow, col - centerCol) / maxDist;
-    const delay = REDUCE_MOTION ? 0 : (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.1);
+  const tiles = [];
+  let i = 0, accHeight = 0;
+  while (accHeight < targetHeight && i < 500){
+    const p = shuffled[i % shuffled.length];
+    const ratio = HERO_RATIOS[Math.floor(Math.random() * HERO_RATIOS.length)];
     const fig = document.createElement("figure");
     fig.className = "hero__tile";
-    fig.style.transitionDelay = delay.toFixed(2) + "s";
+    fig.style.aspectRatio = ratio;
     fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
     el.appendChild(fig);
-    return fig;
+    tiles.push(fig);
+    accHeight += colWidth / ratio;
+    i++;
+  }
+
+  // mede a posição real de cada peça DEPOIS do masonry montar (columns não
+  // é uma grade limpa como antes) pra calcular a distância até o centro —
+  // é isso que faz o efeito "gota d'água" de verdade, vindo do meio
+  requestAnimationFrame(() => {
+    const rect = el.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const maxDist = Math.hypot(cx, cy) || 1;
+    const RIPPLE_START = 0.05, RIPPLE_SPREAD = 0.85;
+    tiles.forEach(t => {
+      const r = t.getBoundingClientRect();
+      const tx = (r.left - rect.left) + r.width / 2, ty = (r.top - rect.top) + r.height / 2;
+      const dist = Math.hypot(tx - cx, ty - cy) / maxDist;
+      t.style.transitionDelay = REDUCE_MOTION ? "0s" : (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.1).toFixed(2) + "s";
+    });
+    requestAnimationFrame(() => tiles.forEach(t => t.classList.add("in-view")));
   });
 
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    tiles.forEach(t => t.classList.add("in-view"));
-  }));
-
-  const logoDelayMs = (RIPPLE_START + RIPPLE_SPREAD + 0.5) * 1000;
+  const logoDelayMs = 1400;
   setTimeout(() => {
     $("#heroContent").classList.add("is-visible");
     playLogoReveal();
@@ -732,7 +742,7 @@ if (tabbarItems.length){
 // ============================================================
 let lastWasMobile = isMobileView();
 let resizeTimer = null;
-let lastHeroGrid = computeHeroGrid();
+let lastHeroColWidth = computeHeroColWidth();
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
@@ -741,9 +751,9 @@ window.addEventListener("resize", () => {
       lastWasMobile = nowMobile;
       renderMural();
     }
-    const nextGrid = computeHeroGrid();
-    if (nextGrid.cols !== lastHeroGrid.cols || nextGrid.rows !== lastHeroGrid.rows){
-      lastHeroGrid = nextGrid;
+    const nextColWidth = computeHeroColWidth();
+    if (nextColWidth !== lastHeroColWidth){
+      lastHeroColWidth = nextColWidth;
       initHeroMosaic();
     }
   }, 200);

@@ -64,7 +64,7 @@ ul{ list-style:none; margin:0; padding:0; }
 .section__title span{ color: var(--orange); }
 .section__desc{ color: rgba(234,233,232,.55); font-size: 1.02rem; max-width: 46ch; margin: .9rem 0 0; }
 
-.section{ position:relative; padding: 8rem 5vw; max-width: 1400px; margin: 0 auto; }
+.section{ position:relative; padding: 8rem 4vw; max-width: 1900px; margin: 0 auto; }
 
 /* foto de fundo com parallax (JS aplica translateY no scroll) atrás de
    toda seção — mesma linguagem visual do hero, sem repetir o mosaico */
@@ -181,12 +181,10 @@ ul{ list-style:none; margin:0; padding:0; }
    (atraso cresce do centro pras bordas) e depois de assentar continua viva,
    com leve flutuação e trocas de foto escalonadas pelo grid */
 .hero__mosaic{
-  position:absolute; inset:0; z-index:0; display:grid;
-  grid-template-columns: repeat(var(--hero-cols, 18), 1fr);
-  grid-template-rows: repeat(var(--hero-rows, 12), 1fr);
-  gap: 0;
+  position:absolute; inset:0; z-index:0; overflow:hidden;
+  column-width: var(--hero-colw, 190px); column-gap: 0;
 }
-.hero__tile{ position:relative; overflow:hidden; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
+.hero__tile{ position:relative; overflow:hidden; break-inside:avoid; width:100%; margin:0; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
 .hero__tile.in-view{ opacity: 1; transform: scale(1); }
 .hero__tile-inner{ position:absolute; inset:-6%; animation: heroFloat var(--fd, 7s) ease-in-out infinite; animation-delay: var(--fdd, 0s); }
 .hero__tile img{
@@ -376,11 +374,10 @@ ul{ list-style:none; margin:0; padding:0; }
    e deixa buraco embaixo das mais baixas. columns resolve isso: cada
    coluna empilha do jeito que dá, sem forçar altura de linha */
 .card-grid--photos{
-  display:block; column-count: 3; column-gap: 1.4rem;
+  display:block; column-width: 300px; column-gap: 1.4rem;
 }
 .card-grid--photos .card{ break-inside: avoid; margin-bottom: 1.4rem; width: 100%; }
-@media (max-width: 1100px){ .card-grid--photos{ column-count: 2; } }
-@media (max-width: 560px){ .card-grid--photos{ column-count: 1; } }
+@media (max-width: 560px){ .card-grid--photos{ column-width: 100%; } }
 
 /* ------ mobile: blocos por álbum com "ver mais" ------ */
 .mobile-album-block{ margin-bottom: 2.6rem; }
