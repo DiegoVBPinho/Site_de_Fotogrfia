@@ -203,10 +203,26 @@ async function buildHeroPool(){
 function computeHeroGrid(){
   const w = window.innerWidth, h = window.innerHeight;
   const mobile = w < 640;
-  const targetCell = mobile ? 90 : 150;
-  const cols = Math.max(mobile ? 4 : 7, Math.min(mobile ? 6 : 14, Math.round(w / targetCell)));
-  const rows = Math.max(mobile ? 7 : 5, Math.min(mobile ? 10 : 8, Math.round(h / targetCell)));
+  const targetCell = mobile ? 46 : 74;
+  const cols = Math.max(mobile ? 8 : 14, Math.min(mobile ? 12 : 26, Math.round(w / targetCell)));
+  const rows = Math.max(mobile ? 14 : 10, Math.min(mobile ? 20 : 16, Math.round(h / targetCell)));
   return { cols, rows };
+}
+
+// formas mistas (deitada/em pé/quadrada/grande) — encaixadas com grid
+// "dense" pra parecer um mosaico feito de peças diferentes, tipo quebra-
+// cabeça, e não uma grade uniforme de quadradinhos iguais
+const HERO_SHAPES = [
+  { cls: "w2h1", cw: 2, ch: 1, weight: 5 },  // deitada
+  { cls: "w1h2", cw: 1, ch: 2, weight: 5 },  // em pé
+  { cls: "w1h1", cw: 1, ch: 1, weight: 6 },  // quadrada
+  { cls: "w2h2", cw: 2, ch: 2, weight: 2 },  // grande, de vez em quando
+];
+function pickShape(){
+  const total = HERO_SHAPES.reduce((s, x) => s + x.weight, 0);
+  let r = Math.random() * total;
+  for (const s of HERO_SHAPES){ if ((r -= s.weight) <= 0) return s; }
+  return HERO_SHAPES[0];
 }
 
 function initHeroMosaic(){
@@ -214,25 +230,45 @@ function initHeroMosaic(){
   const pool = (PHOTOS.length ? PHOTOS : heroPool).filter(Boolean);
   if (!pool.length) return;
   const { cols, rows } = computeHeroGrid();
-  const cells = cols * rows;
   el.style.setProperty("--hero-cols", cols);
   el.style.setProperty("--hero-rows", rows);
 
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const picks = [];
-  while (picks.length < cells) picks.push(shuffled[picks.length % shuffled.length]);
+  // preenche uma grade fina (cols x rows) com peças de tamanhos variados,
+  // sem sobrepor — varre livre-a-livre e encaixa a maior forma que couber
+  const occupied = Array.from({ length: rows }, () => new Array(cols).fill(false));
+  const placements = [];
+  for (let r = 0; r < rows; r++){
+    for (let c = 0; c < cols; c++){
+      if (occupied[r][c]) continue;
+      let shape = pickShape();
+      while ((r + shape.ch > rows || c + shape.cw > cols || !fits(r, c, shape)) && (shape.cw > 1 || shape.ch > 1)){
+        shape = { cls: "w1h1", cw: 1, ch: 1 };
+      }
+      for (let rr = r; rr < r + shape.ch; rr++) for (let cc = c; cc < c + shape.cw; cc++) occupied[rr][cc] = true;
+      placements.push({ row: r, col: c, ...shape });
+    }
+  }
+  function fits(r, c, shape){
+    for (let rr = r; rr < r + shape.ch; rr++) for (let cc = c; cc < c + shape.cw; cc++){
+      if (rr >= rows || cc >= cols || occupied[rr][cc]) return false;
+    }
+    return true;
+  }
 
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const RIPPLE_START = 0.05, RIPPLE_SPREAD = 0.85;
   const centerRow = (rows - 1) / 2, centerCol = (cols - 1) / 2;
   const maxDist = Math.hypot(centerRow, centerCol) || 1;
 
   el.innerHTML = "";
-  const tiles = picks.map((p, idx) => {
-    const row = Math.floor(idx / cols), col = idx % cols;
-    const dist = Math.hypot(row - centerRow, col - centerCol) / maxDist;
+  const tiles = placements.map((pl, idx) => {
+    const p = shuffled[idx % shuffled.length];
+    const dist = Math.hypot((pl.row + pl.ch / 2) - centerRow, (pl.col + pl.cw / 2) - centerCol) / maxDist;
     const delay = REDUCE_MOTION ? 0 : (RIPPLE_START + dist * RIPPLE_SPREAD + Math.random() * 0.1);
     const fig = document.createElement("figure");
     fig.className = "hero__tile";
+    fig.style.gridColumn = `${pl.col + 1} / span ${pl.cw}`;
+    fig.style.gridRow = `${pl.row + 1} / span ${pl.ch}`;
     fig.style.transitionDelay = delay.toFixed(2) + "s";
     fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
     el.appendChild(fig);
@@ -243,11 +279,16 @@ function initHeroMosaic(){
     tiles.forEach(t => t.classList.add("in-view"));
   }));
 
-  const heroEl = $("#inicio");
-  const contentDelayMs = (RIPPLE_START + RIPPLE_SPREAD + 0.6) * 1000;
-  setTimeout(() => { $("#heroContent").classList.add("is-visible"); }, REDUCE_MOTION ? 0 : contentDelayMs);
+  // logo entra em recorte "quadro a quadro" (steps) por cima do mosaico
+  const logoWrap = $("#heroLogoWrap");
+  const logoDelayMs = (RIPPLE_START + RIPPLE_SPREAD + 0.5) * 1000;
+  setTimeout(() => {
+    $("#heroContent").classList.add("is-visible");
+    if (logoWrap) logoWrap.classList.add("play");
+  }, REDUCE_MOTION ? 0 : logoDelayMs);
 
   if (REDUCE_MOTION) return;
+  const heroEl = $("#inicio");
   // troca fotos aos poucos em alguns tiles aleatórios — mantém o mosaico vivo sem nunca ficar igual
   setInterval(() => {
     if (!heroEl || heroEl.getBoundingClientRect().bottom < 0) return; // fora da tela, poupa trabalho
@@ -841,12 +882,51 @@ const io = new IntersectionObserver((entries) => {
 function observeReveals(){ $$(".reveal").forEach(el => io.observe(el)); }
 
 // ============================================================
+// Fotos de fundo com parallax — todas as seções, não só o hero
+// ============================================================
+function initSectionBackgrounds(){
+  const targets = [
+    { id: "muralBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
+    { id: "tempoBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
+    { id: "sobreBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
+    { id: "contatoBg", from: PHOTOS.slice().sort(() => Math.random() - 0.5) },
+  ];
+  targets.forEach(({ id, from }) => {
+    const el = document.getElementById(id);
+    const photo = from[0];
+    if (!el || !photo) return;
+    const img = document.createElement("img");
+    img.src = photo.src; img.alt = ""; img.loading = "lazy";
+    el.appendChild(img);
+  });
+}
+
+function initParallax(){
+  const layers = $$(".section__bg img");
+  if (!layers.length || REDUCE_MOTION) return;
+  function tick(){
+    const vh = window.innerHeight;
+    layers.forEach(img => {
+      const rect = img.parentElement.getBoundingClientRect();
+      if (rect.bottom < -200 || rect.top > vh + 200) return;
+      const center = rect.top + rect.height / 2;
+      const dist = (center - vh / 2) / vh;
+      img.style.transform = `translateY(${(dist * 70).toFixed(1)}px)`;
+    });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
 // Init
 // ============================================================
 stampApertures(document);
 initCursor();
 initMagnetic();
 initHero();
+initSectionBackgrounds();
+initParallax();
 renderFilters();
 renderMural();
 renderTimeline();
