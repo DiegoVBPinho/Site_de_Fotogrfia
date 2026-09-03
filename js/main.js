@@ -224,6 +224,20 @@ function computeHeroColWidth(){
 // inteiro de ponta a ponta ("peça encaixa na outra até completar tudo")
 const HERO_RATIOS = [3/4, 4/3, 1, 2/3, 3/2, 4/5];
 
+// corrige a peça do mosaico pra proporção REAL da foto assim que ela
+// carrega — sem isso, object-fit:cover corta a imagem pra caber numa
+// caixa com proporção aleatória (o que não pode: foto sempre inteira)
+function matchTileToPhoto(fig){
+  const img = fig.querySelector("img");
+  if (!img) return;
+  const apply = () => {
+    if (img.naturalWidth && img.naturalHeight){
+      fig.style.aspectRatio = `${img.naturalWidth} / ${img.naturalHeight}`;
+    }
+  };
+  if (img.complete) apply(); else img.addEventListener("load", apply, { once: true });
+}
+
 function initHeroMosaic(){
   const el = $("#heroMosaic");
   const pool = PHOTOS.filter(Boolean);
@@ -243,15 +257,18 @@ function initHeroMosaic(){
   let i = 0, accHeight = 0;
   while (accHeight < targetHeight && i < 500 && i < shuffled.length){
     const p = shuffled[i];
-    const ratio = HERO_RATIOS[Math.floor(Math.random() * HERO_RATIOS.length)];
+    const estRatio = HERO_RATIOS[Math.floor(Math.random() * HERO_RATIOS.length)];
     const fig = document.createElement("figure");
     fig.className = "hero__tile";
     fig.dataset.photoId = p.id;
-    fig.style.aspectRatio = ratio;
+    fig.style.aspectRatio = estRatio; // chute inicial só pra estimar quantos tiles cabem
     fig.innerHTML = `<div class="hero__tile-inner" style="--fd:${(5 + Math.random() * 4).toFixed(1)}s; --fdd:${(Math.random() * 3).toFixed(1)}s; --fx:${(Math.random() * 14 - 7).toFixed(0)}px; --fy:${(Math.random() * 14 - 7).toFixed(0)}px;"><img src="${p.src}" alt=""></div>`;
+    // assim que a foto carrega, a peça assume a proporção REAL dela —
+    // corta zero, foto deitada fica deitada, em pé fica em pé
+    matchTileToPhoto(fig);
     el.appendChild(fig);
     tiles.push(fig);
-    accHeight += colWidth / ratio;
+    accHeight += colWidth / estRatio;
     i++;
   }
 
@@ -298,7 +315,11 @@ function initHeroMosaic(){
       const next = available[ai++];
       tile.dataset.photoId = next.id;
       img.classList.add("is-fading");
-      setTimeout(() => { img.src = next.src; img.classList.remove("is-fading"); }, 500);
+      setTimeout(() => {
+        img.src = next.src;
+        img.classList.remove("is-fading");
+        matchTileToPhoto(tile);
+      }, 500);
     });
   }, 1400);
 }
