@@ -596,33 +596,46 @@ function renderLatestAlbum(){
 
   if (!candidates.length){ el.innerHTML = ""; return; }
 
-  const { album: leaf, date } = candidates[0];
-  // se o mais recente é um sub-álbum, destaca o álbum-pai (o evento
-  // inteiro), não o pedacinho — "Banda" sozinho não diz nada, "Feirão
-  // Folclórico 2026" diz
-  const a = leaf.parent ? getAlbum(leaf.parent) : leaf;
-  const parent = a.parent ? getAlbum(a.parent) : null;
-  const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
-  const count = albumPhotosRecursive(a.id).length;
+  // resolve cada candidato pro álbum-pai (o evento inteiro, não o
+  // pedacinho — "Banda" sozinho não diz nada, "Feirão Folclórico 2026"
+  // diz) e pega os 2 mais recentes sem repetir o mesmo pai
+  const seen = new Set();
+  const featured = [];
+  for (const { album: leaf, date } of candidates){
+    const a = leaf.parent ? getAlbum(leaf.parent) : leaf;
+    if (seen.has(a.id)) continue;
+    seen.add(a.id);
+    featured.push({ a, date });
+    if (featured.length === 2) break;
+  }
 
-  el.innerHTML = `
-    <figure class="card latest-album__card" data-id="${a.id}" data-hover>
-      <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
-      <div class="card__overlay latest-album__overlay">
-        <p class="latest-album__eyebrow">Álbum mais recente</p>
-        ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
-        <h3 class="latest-album__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
-        <p class="latest-album__date">${formatDateLong(date)} · ${count} foto${count === 1 ? "" : "s"}</p>
-      </div>
-    </figure>
-  `;
+  // mais recente sempre na esquerda
+  el.innerHTML = `<div class="latest-album__row">${featured.map(({ a, date }, i) => {
+    const parent = a.parent ? getAlbum(a.parent) : null;
+    const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
+    const count = albumPhotosRecursive(a.id).length;
+    return `
+      <figure class="card latest-album__card" data-id="${a.id}" data-hover>
+        <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
+        <div class="card__overlay latest-album__overlay">
+          <p class="latest-album__eyebrow">${i === 0 ? "Álbum mais recente" : "Também novo"}</p>
+          ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
+          <h3 class="latest-album__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
+          <p class="latest-album__date">${formatDateLong(date)} · ${count} foto${count === 1 ? "" : "s"}</p>
+        </div>
+      </figure>
+    `;
+  }).join("")}</div>`;
+
   stampApertures(el);
   observeCards(el);
-  $(".card", el).addEventListener("click", () => {
-    navStack = breadcrumbFor(a.id).map(x => x.id);
-    searchQuery = ""; searchInput.value = "";
-    renderMural();
-    $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+  $$(".card", el).forEach(card => {
+    card.addEventListener("click", () => {
+      navStack = breadcrumbFor(card.dataset.id).map(x => x.id);
+      searchQuery = ""; searchInput.value = "";
+      renderMural();
+      $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   });
 }
 

@@ -408,13 +408,18 @@ ul{ list-style:none; margin:0; padding:0; }
   margin-bottom: 10.25rem;
   width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw;
 }
+/* 2 álbuns lado a lado, mais recente sempre à esquerda */
+.latest-album__row{
+  display:flex; justify-content:center; align-items:stretch; gap: 1.4rem; flex-wrap: wrap;
+  max-width: 1400px; margin: 0 auto;
+}
 /* mesmo truque do retrato em Sobre Mim: sem teto, o card (aspect-ratio
    fixo) cresce junto com a tela cheia em monitor grande e vira um
    banner gigante e esticado — trava num tamanho confortável */
-.latest-album__card{ aspect-ratio: 2.3 / 1; border-radius: var(--radius); max-width: 1100px; margin: 0 auto; }
+.latest-album__card{ aspect-ratio: 5 / 4; border-radius: var(--radius); flex: 1 1 420px; max-width: 680px; }
 .latest-album__overlay{
-  left: 1.2rem; right:auto; top: 50%; bottom:auto; transform: translateY(-50%); max-width: min(560px, 80%);
-  padding: clamp(1.2rem, 2.4vw, 2rem); border-radius: calc(var(--radius) + 14px);
+  left: 1.2rem; right:auto; top: 50%; bottom:auto; transform: translateY(-50%); max-width: min(320px, 80%);
+  padding: clamp(1.1rem, 2vw, 1.6rem); border-radius: calc(var(--radius) + 14px);
 }
 .latest-album__eyebrow{
   font-family: var(--font-mono); font-size: .7rem; letter-spacing: .2em; text-transform: uppercase;
