@@ -64,7 +64,10 @@ ul{ list-style:none; margin:0; padding:0; }
 .section__title span{ color: var(--orange); }
 .section__desc{ color: rgba(234,233,232,.55); font-size: 1.02rem; max-width: 46ch; margin: .9rem 0 0; }
 
-.section{ position:relative; padding: 6rem 4vw; max-width: 1900px; margin: 0 auto; }
+/* sem max-width: o padding em vw já escala com a tela — em monitor
+   grande, a grade só ganha mais colunas (auto-fill), nunca sobra
+   margem fixa dos lados */
+.section{ position:relative; padding: 6rem 4vw; }
 
 /* foto de fundo com parallax (JS aplica translateY no scroll) atrás de
    toda seção — mesma linguagem visual do hero, sem repetir o mosaico */
