@@ -394,7 +394,7 @@ ul{ list-style:none; margin:0; padding:0; }
 .card--photo.card--portrait{ aspect-ratio: 3 / 4; }
 
 /* ===== Álbum mais recente (destaque acima da grade) ===== */
-.latest-album{ margin-bottom: 4.5rem; }
+.latest-album{ margin-bottom: 10.25rem; }
 .latest-album__card{ aspect-ratio: 21 / 8; }
 .latest-album__overlay{
   left: 1.2rem; right:auto; bottom: 1.2rem; max-width: min(560px, 80%);
