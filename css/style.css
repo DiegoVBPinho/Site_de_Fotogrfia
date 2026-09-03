@@ -519,8 +519,11 @@ ul{ list-style:none; margin:0; padding:0; }
 /* ============================================================
    Sobre mim
    ============================================================ */
-.sobre{ display:grid; grid-template-columns: .8fr 1.2fr; gap: 4.5rem; align-items:center; }
-.sobre__portrait{ position:relative; aspect-ratio: 3/4; border-radius: var(--radius); overflow:hidden; }
+/* sem teto de largura aqui, o retrato (aspect-ratio 3/4) cresce junto
+   com o grid em monitor grande e vira uma coluna gigante e esticada —
+   trava o layout num tamanho confortável de leitura */
+.sobre{ display:grid; grid-template-columns: .8fr 1.2fr; gap: 4.5rem; align-items:center; max-width: 1400px; margin: 0 auto; }
+.sobre__portrait{ position:relative; aspect-ratio: 3/4; max-width: 480px; border-radius: var(--radius); overflow:hidden; }
 .sobre__portrait img{ width:100%; height:100%; object-fit:cover; filter: saturate(.85) brightness(.92); }
 .sobre__frame{ position:absolute; inset: 14px; border: 1px solid rgba(216,117,42,.55); pointer-events:none; }
 .sobre__text{ color: rgba(234,233,232,.72); font-size: 1.08rem; white-space: pre-line; }
