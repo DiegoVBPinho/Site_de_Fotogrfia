@@ -198,7 +198,7 @@ ul{ list-style:none; margin:0; padding:0; }
   position: relative; min-height: 100svh; display:flex; flex-direction:column;
   align-items:center; justify-content:center; text-align:center; overflow:hidden;
   background: var(--navy-black);
-  padding: 6.5rem 0 5rem; /* nunca deixa o card colar no nav ou no "role pra baixo" */
+  padding: 6.5rem 0 9rem; /* nunca deixa o card colar no nav ou no "role pra baixo" */
 }
 /* mosaico do hero — grade de fotos que nunca para: entra em "gota d'água"
    (atraso cresce do centro pras bordas) e depois de assentar continua viva,
