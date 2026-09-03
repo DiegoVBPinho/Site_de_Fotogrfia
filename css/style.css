@@ -64,7 +64,7 @@ ul{ list-style:none; margin:0; padding:0; }
 .section__title span{ color: var(--orange); }
 .section__desc{ color: rgba(234,233,232,.55); font-size: 1.02rem; max-width: 46ch; margin: .9rem 0 0; }
 
-.section{ position:relative; padding: 8rem 4vw; max-width: 1900px; margin: 0 auto; }
+.section{ position:relative; padding: 6rem 4vw; max-width: 1900px; margin: 0 auto; }
 
 /* foto de fundo com parallax (JS aplica translateY no scroll) atrás de
    toda seção — mesma linguagem visual do hero, sem repetir o mosaico */
@@ -394,7 +394,7 @@ ul{ list-style:none; margin:0; padding:0; }
 .card--photo.card--portrait{ aspect-ratio: 3 / 4; }
 
 /* ===== Álbum mais recente (destaque acima da grade) ===== */
-.latest-album{ margin-bottom: 3rem; }
+.latest-album{ margin-bottom: 4.5rem; }
 .latest-album__card{ aspect-ratio: 21 / 8; }
 .latest-album__overlay{
   left: 1.2rem; right:auto; bottom: 1.2rem; max-width: min(560px, 80%);
