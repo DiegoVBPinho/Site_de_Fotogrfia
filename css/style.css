@@ -208,11 +208,14 @@ ul{ list-style:none; margin:0; padding:0; }
    com leve flutuação e trocas de foto escalonadas pelo grid */
 .hero__mosaic{
   position:absolute; inset: -1.5%; z-index:0; overflow:hidden;
-  column-width: var(--hero-colw, 190px); column-gap: 3px;
-  background: #fff; /* aparece nas linhas entre as peças */
+  column-width: var(--hero-colw, 190px); column-gap: 0;
   filter: blur(0.6px);
 }
-.hero__tile{ position:relative; overflow:hidden; break-inside:avoid; width:100%; margin:0 0 3px; background:#fff; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
+/* linha branca vem da BORDA de cada peça, não de um fundo branco atrás
+   do mosaico — como as peças agora têm alturas diferentes (proporção
+   real da foto), um fundo branco no container vazava como bloco
+   enorme embaixo das colunas mais curtas */
+.hero__tile{ position:relative; overflow:hidden; break-inside:avoid; width:100%; margin:0; border: 1.5px solid #fff; opacity:0; transform: scale(.85); transition: opacity 1s var(--ease-soft), transform 1s var(--ease-soft); }
 .hero__tile.in-view{ opacity: 1; transform: scale(1); }
 .hero__tile-inner{ position:absolute; inset:-6%; animation: heroFloat var(--fd, 7s) ease-in-out infinite; animation-delay: var(--fdd, 0s); }
 .hero__tile img{
