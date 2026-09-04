@@ -676,6 +676,13 @@ searchInput.addEventListener("input", () => {
   searchQuery = searchInput.value;
   renderMural();
 });
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && searchQuery.trim()){
+    e.preventDefault();
+    searchInput.blur();
+    $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
 searchClear.addEventListener("click", () => {
   searchInput.value = "";
   searchQuery = "";
