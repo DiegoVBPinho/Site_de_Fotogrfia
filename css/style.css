@@ -126,18 +126,18 @@ ul{ list-style:none; margin:0; padding:0; }
 .nav__album{ display:flex; align-items:center; gap: 1rem; min-width:0; }
 .nav__album:empty{ display:none; }
 .nav__album__back{
-  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .05em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: .92rem; font-weight:700; letter-spacing: .05em; text-transform: uppercase;
   color: var(--orange); flex-shrink: 0; transition: transform .25s var(--ease);
   display:inline-flex; align-items:center; gap:.35rem;
 }
 .nav__album__back:hover{ transform: translateX(-4px); }
 .nav__album__title{
-  font-family: var(--font-display); font-weight:700; font-size: .98rem; margin:0;
+  font-family: var(--font-display); font-weight:800; font-size: 1.3rem; margin:0;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 32vw;
 }
 @media (max-width: 780px){
-  .nav__album__title{ max-width: 34vw; font-size: .86rem; }
-  .nav__album__back{ font-size: .64rem; }
+  .nav__album__title{ max-width: 34vw; font-size: 1.05rem; }
+  .nav__album__back{ font-size: .78rem; }
 }
 .nav__right{ display:flex; align-items:center; gap: 1.8rem; }
 .nav__links{ display:flex; gap: 2.4rem; align-items:center; }
