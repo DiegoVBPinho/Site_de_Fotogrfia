@@ -448,8 +448,11 @@ ul{ list-style:none; margin:0; padding:0; }
    fotos ele "balanceava" em menos colunas do que cabia na tela, deixando
    um buraco enorme do lado em vez de espalhar pela largura toda. */
 .card-grid--photos{ display:block; }
-.masonry-track{ display:flex; align-items:flex-start; gap: 1.4rem; }
-.masonry-col{ display:flex; flex-direction:column; gap: 1.4rem; flex: 1 1 0; min-width: 0; }
+.masonry-track{ display:flex; align-items:flex-start; justify-content:center; gap: 1.4rem; }
+/* sem teto, um álbum com poucas fotos (1 coluna) faz a foto esticar
+   até a largura toda do container via flex:1 — trava num tamanho
+   parecido com a largura-base da coluna (300px) */
+.masonry-col{ display:flex; flex-direction:column; gap: 1.4rem; flex: 1 1 0; min-width: 0; max-width: 460px; }
 @media (max-width: 560px){ .card-grid--photos{ column-width: 100%; } }
 
 /* ------ mobile: blocos por álbum com "ver mais" ------ */
