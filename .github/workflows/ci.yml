@@ -1,0 +1,16 @@
+name: Checagem de dados
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validar-dados:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Confere Albuns.csv e Fotos.csv
+        run: node scripts/validate-data.js
