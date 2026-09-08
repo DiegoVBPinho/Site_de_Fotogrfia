@@ -663,6 +663,70 @@ ul{ list-style:none; margin:0; padding:0; }
 }
 
 /* ============================================================
+   Admin — login por senha, apagar foto/álbum, trocar capa. A função
+   que confere a senha roda escondida no Netlify; aqui é só a
+   interface (fica invisível pra qualquer visitante comum).
+   ============================================================ */
+.admin-only{ display:none; }
+body.admin-mode .admin-only{ display:flex; }
+body.admin-mode .card__admin-delete{ display:flex; }
+
+.admin-trigger{
+  position:fixed; right:1rem; bottom:1rem; z-index:120; width:34px; height:34px;
+  border-radius:50%; background: rgba(6,15,24,.55); border:1px solid var(--glass-border);
+  color: rgba(234,233,232,.35); font-size:1rem; backdrop-filter: blur(10px);
+  transition: color .2s var(--ease), border-color .2s var(--ease), transform .3s var(--ease);
+}
+.admin-trigger:hover{ color: var(--orange); border-color: var(--orange); transform: rotate(45deg); }
+
+.admin-bar{
+  position:fixed; left:1rem; bottom:1rem; z-index:120; align-items:center; gap:.8rem;
+  padding:.6rem 1rem; border-radius:999px; background: rgba(216,117,42,.14);
+  border:1px solid rgba(216,117,42,.4); color: var(--orange);
+  font-family: var(--font-mono); font-size:.72rem; letter-spacing:.05em; text-transform:uppercase;
+}
+.admin-bar button{ color: var(--cream); text-decoration:underline; text-underline-offset:2px; }
+.admin-bar button:hover{ color: var(--orange); }
+
+.admin-modal{
+  position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center;
+  background: rgba(6,15,24,.78); backdrop-filter: blur(6px);
+}
+.admin-modal.open{ display:flex; }
+.admin-modal__box{
+  position:relative; width:min(320px, 88vw); padding: 2rem 1.8rem; border-radius: 16px;
+  background: var(--navy-deep); border:1px solid var(--glass-border);
+  box-shadow: 0 30px 70px -24px rgba(0,0,0,.65);
+}
+.admin-modal__close{ position:absolute; top:.9rem; right:.9rem; color: rgba(234,233,232,.5); font-size:1rem; }
+.admin-modal__close:hover{ color: var(--orange); }
+.admin-modal__box input{
+  width:100%; padding:.75rem 1rem; margin-bottom:.9rem; border-radius:10px;
+  background: rgba(234,233,232,.06); border:1px solid var(--glass-border); color: var(--cream); font-size:.95rem;
+}
+.admin-modal__box input:focus{ border-color: var(--orange); outline:none; }
+.admin-modal__submit{ width:100%; justify-content:center; }
+.admin-modal__error{ margin:.8rem 0 0; font-size:.8rem; color: #e8635a; }
+
+.admin-btn{
+  font-family: var(--font-mono); font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+  padding:.6rem 1rem; border-radius:999px; background: rgba(234,233,232,.08); color: var(--cream);
+  border:1px solid var(--glass-border); transition: background .2s var(--ease), border-color .2s var(--ease);
+}
+.admin-btn:hover{ border-color: var(--orange); color: var(--orange); }
+.admin-btn--danger:hover{ border-color:#e8635a; color:#e8635a; }
+
+.lightbox__admin{ flex-direction:column; gap:.6rem; margin-top:1rem; }
+
+.card__admin-delete{
+  position:absolute; z-index:4; top:.5rem; right:.5rem; width:30px; height:30px;
+  align-items:center; justify-content:center; border-radius:50%;
+  background: rgba(6,15,24,.6); border:1px solid rgba(232,99,90,.5); color:#e8635a; font-size:.85rem;
+  backdrop-filter: blur(6px);
+}
+.card__admin-delete:hover{ background: #e8635a; color: var(--navy-black); }
+
+/* ============================================================
    Reduced motion — desliga o que não é essencial
    ============================================================ */
 @media (prefers-reduced-motion: reduce){

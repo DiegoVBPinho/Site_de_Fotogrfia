@@ -475,6 +475,7 @@ function renderMural(){
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
+    wireAdminAlbumDelete(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -553,6 +554,7 @@ function renderMural(){
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
+    wireAdminAlbumDelete(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -650,6 +652,7 @@ function albumCardHTML(a){
   const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
   return `
     <figure class="card" data-id="${a.id}" data-hover>
+      <button class="admin-only card__admin-delete" data-album-delete="${a.id}" title="Apagar álbum" data-hover>🗑</button>
       <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
       <div class="card__overlay">
         ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
@@ -660,6 +663,16 @@ function albumCardHTML(a){
       </div>
     </figure>
   `;
+}
+
+// liga o botão de apagar álbum (fica escondido até entrar no modo admin)
+function wireAdminAlbumDelete(container){
+  $$("[data-album-delete]", container).forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      adminDeleteAlbum(btn.dataset.albumDelete, () => renderMural());
+    });
+  });
 }
 
 function photoCardHTML(p){
@@ -824,6 +837,15 @@ lbDownload.addEventListener("click", () => {
   document.body.appendChild(a);
   a.click();
   a.remove();
+});
+$("#lbSetCover").addEventListener("click", () => {
+  const p = lbItems[lbIndex];
+  if (p) adminSetCover(p.album, p.id);
+});
+$("#lbDeletePhoto").addEventListener("click", () => {
+  const p = lbItems[lbIndex];
+  if (!p) return;
+  adminDeletePhoto(p.id, () => { closeLightbox(); renderMural(); renderLatestAlbum(); });
 });
 
 function openLightbox(items, index){
@@ -1101,6 +1123,101 @@ document.addEventListener("contextmenu", e => {
 document.addEventListener("dragstart", e => {
   if (e.target.tagName === "IMG") e.preventDefault();
 });
+
+// ============================================================
+// Painel de admin — login por senha, apagar foto/álbum e trocar capa
+// direto do site. A função que confere a senha e mexe nos arquivos de
+// verdade roda escondida no Netlify — só funciona no site publicado;
+// no teste local (localhost) dá erro de rede, e é esperado.
+// ============================================================
+const ADMIN_ENDPOINT = "/.netlify/functions/admin";
+let adminPassword = sessionStorage.getItem("adminPassword") || null;
+
+async function adminCall(action, params){
+  const res = await fetch(ADMIN_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: adminPassword, action, ...params }),
+  });
+  let data = {};
+  try { data = await res.json(); } catch { /* resposta vazia */ }
+  if (!res.ok) throw new Error(data.error || `Não deu — o site publicado precisa estar no ar (HTTP ${res.status}).`);
+  return data;
+}
+
+function setAdminMode(on){
+  document.body.classList.toggle("admin-mode", on);
+  $("#adminBar").style.display = on ? "flex" : "none";
+  renderMural();
+  renderLatestAlbum();
+}
+
+function openAdminModal(){
+  $("#adminModal").classList.add("open");
+  $("#adminModalError").style.display = "none";
+  $("#adminPasswordInput").value = "";
+  $("#adminPasswordInput").focus();
+}
+function closeAdminModal(){ $("#adminModal").classList.remove("open"); }
+
+$("#adminTrigger").addEventListener("click", openAdminModal);
+$("#adminModalClose").addEventListener("click", closeAdminModal);
+$("#adminModal").addEventListener("click", (e) => { if (e.target.id === "adminModal") closeAdminModal(); });
+$("#adminPasswordInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#adminLoginBtn").click(); });
+
+$("#adminLoginBtn").addEventListener("click", async () => {
+  const pass = $("#adminPasswordInput").value;
+  if (!pass) return;
+  const btn = $("#adminLoginBtn");
+  btn.disabled = true; btn.textContent = "Entrando...";
+  const before = adminPassword;
+  adminPassword = pass;
+  try {
+    await adminCall("verify", {});
+    sessionStorage.setItem("adminPassword", pass);
+    closeAdminModal();
+    setAdminMode(true);
+  } catch (err){
+    adminPassword = before;
+    $("#adminModalError").textContent = err.message.includes("HTTP") ? err.message : "Senha incorreta.";
+    $("#adminModalError").style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Entrar";
+  }
+});
+
+$("#adminLogout").addEventListener("click", () => {
+  adminPassword = null;
+  sessionStorage.removeItem("adminPassword");
+  setAdminMode(false);
+});
+
+async function adminDeletePhoto(fotoId, onDone){
+  if (!confirm("Apagar essa foto? Não dá pra desfazer.")) return;
+  try {
+    await adminCall("delete-photo", { fotoId });
+    alert("Apagada! Pode levar 1-2 minutos pra sumir do site publicado.");
+    onDone && onDone();
+  } catch (err){ alert("Não deu: " + err.message); }
+}
+
+async function adminDeleteAlbum(albumId, onDone){
+  if (!confirm("Apagar esse álbum inteiro e todas as fotos dele? Não dá pra desfazer.")) return;
+  try {
+    await adminCall("delete-album", { albumId });
+    alert("Apagado! Pode levar 1-2 minutos pra sumir do site publicado.");
+    onDone && onDone();
+  } catch (err){ alert("Não deu: " + err.message); }
+}
+
+async function adminSetCover(albumId, fotoId){
+  try {
+    await adminCall("set-cover", { albumId, fotoId });
+    alert("Capa trocada! Pode levar 1-2 minutos pra atualizar no site publicado.");
+  } catch (err){ alert("Não deu: " + err.message); }
+}
+
+if (adminPassword) setAdminMode(true);
 
 // ============================================================
 // Init

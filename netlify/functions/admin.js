@@ -148,6 +148,12 @@ exports.handler = async (event) => {
   }
 
   try {
+    if (action === "verify"){
+      // senha já foi conferida acima — só confirma que deu certo, sem
+      // mexer em nada. É o que o login do site usa pra saber se entra.
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
     if (action === "delete-photo"){
       const { fotoId } = body;
       if (!fotoId) throw new Error("fotoId obrigatório.");

@@ -159,8 +159,29 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0l-5-5m5 5l5-5M4 21h16"/></svg>
       Baixar foto (com marca d'água)
     </button>
+    <div class="admin-only lightbox__admin" id="lbAdmin">
+      <button class="admin-btn" id="lbSetCover" data-hover>Definir como capa do álbum</button>
+      <button class="admin-btn admin-btn--danger" id="lbDeletePhoto" data-hover>Apagar esta foto</button>
+    </div>
     <p class="lightbox__hint">Clique na foto pra ampliar · arraste pro lado pra navegar.</p>
   </aside>
+</div>
+
+<!-- ===================== ADMIN (área restrita) ===================== -->
+<button class="admin-trigger" id="adminTrigger" aria-label="Área restrita" title="Área restrita">⚙</button>
+<div class="admin-bar admin-only" id="adminBar">
+  <span>Modo admin ativado</span>
+  <button id="adminLogout" data-hover>Sair</button>
+</div>
+<div class="admin-modal" id="adminModal">
+  <div class="admin-modal__box">
+    <button class="admin-modal__close" id="adminModalClose" aria-label="Fechar" data-hover>✕</button>
+    <p class="eyebrow" style="margin-bottom:.3rem;">Área restrita</p>
+    <h3 style="margin:0 0 1.2rem;">Entrar como admin</h3>
+    <input type="password" id="adminPasswordInput" placeholder="Senha" autocomplete="off">
+    <button class="admin-btn admin-modal__submit" id="adminLoginBtn" data-hover>Entrar</button>
+    <p class="admin-modal__error" id="adminModalError" style="display:none;"></p>
+  </div>
 </div>
 
 <!-- ===================== BARRA INFERIOR (SÓ CELULAR) ===================== -->
