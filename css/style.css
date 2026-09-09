@@ -132,6 +132,7 @@ ul{ list-style:none; margin:0; padding:0; }
   display:inline-flex; align-items:center; gap:.35rem;
 }
 .nav__album__back:hover{ transform: translateX(-4px); }
+.nav__album__sep{ color: rgba(234,233,232,.3); flex-shrink:0; }
 .nav__album__title{
   font-family: var(--font-display); font-weight:800; font-size: 1.3rem; margin:0;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 32vw;

@@ -491,6 +491,10 @@ function setAlbumView(on){
     albumViewSavedScrollY = window.scrollY;
     document.body.classList.add("album-view");
     mural.style.opacity = "0";
+    // o navegador às vezes "lembra" a rolagem interna do #mural de uma
+    // visita anterior (scroll restoration) e abre já no meio da grade,
+    // escondendo o título — força começar sempre do topo
+    mural.scrollTop = 0;
     // setTimeout(0) em vez de requestAnimationFrame — rAF não dispara
     // com a aba em segundo plano, e isso não pode depender de a aba
     // estar em foco pra funcionar
@@ -516,7 +520,7 @@ function renderAlbumViewHead(){
   const current = getAlbum(navStack[navStack.length - 1]);
   const count = albumPhotosRecursive(current.id).length;
   el.innerHTML = `
-    <p class="eyebrow">${categoryLabel(current.categoria)}</p>
+    <p class="eyebrow">Álbum de Fotos</p>
     <h2 class="section__title">${albumDisplayName(current)}</h2>
     <p class="section__desc">${count} foto${count === 1 ? "" : "s"}</p>
   `;
@@ -561,6 +565,7 @@ function renderBreadcrumb(){
   const current = getAlbum(navStack[navStack.length - 1]);
   breadcrumbEl.innerHTML = `
     <button class="nav__album__back" id="navAlbumBack" data-hover>← Voltar</button>
+    <span class="nav__album__sep">—</span>
     <h3 class="nav__album__title">${albumDisplayName(current)}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
   `;
   $("#navAlbumBack").addEventListener("click", () => {
