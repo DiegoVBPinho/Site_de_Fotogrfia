@@ -510,6 +510,10 @@ function renderBreadcrumb(){
 function isMobileView(){ return window.innerWidth <= 780; }
 
 function renderMural(){
+  // dentro de um álbum (e fora de busca) a vitrine toma a tela inteira,
+  // tipo Flickr — some hero/linha do tempo/destaques até "Voltar"
+  document.body.classList.toggle("album-view", navStack.length > 0 && !searchQuery);
+
   renderBreadcrumb();
   folderZone.innerHTML = "";
   photosDividerLabel.style.display = "none";

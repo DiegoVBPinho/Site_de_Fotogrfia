@@ -650,6 +650,29 @@ ul{ list-style:none; margin:0; padding:0; }
 }
 
 /* ============================================================
+   Modo "dentro do álbum" — tela cheia, tipo Flickr: some o resto do
+   site (hero, linha do tempo, destaques) e só as fotos do álbum
+   ocupam a tela, com a barra de cima (logo + voltar) fixa por cima.
+   Sai desse modo voltando pra raiz (breadcrumb "Voltar" ou fechando).
+   ============================================================ */
+body.album-view{ overflow: hidden; }
+body.album-view .hero,
+body.album-view #tempo,
+body.album-view #sobre,
+body.album-view .footer,
+body.album-view .latest-album,
+body.album-view #mural > .section__head,
+body.album-view .nav__links{ display: none; }
+body.album-view .nav{
+  background: rgba(6,15,24,.75); backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid rgba(234,233,232,.08); padding: 1rem 5vw;
+}
+body.album-view #mural{
+  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  background: var(--navy-black);
+}
+
+/* ============================================================
    Barra inferior (celular)
    ============================================================ */
 .mobile-tabbar{ display:none; }
