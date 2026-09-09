@@ -49,7 +49,6 @@ const CATEGORY_LABELS = {
   hacktown: "Hacktown",
   "feirao-folclorico": "Feirão Folclórico",
   profissoes: "Profissões",
-  eclipse: "Eclipse",
 };
 function categoryLabel(slug){
   if (!slug) return "Outros";
