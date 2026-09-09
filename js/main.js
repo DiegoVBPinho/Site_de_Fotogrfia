@@ -512,7 +512,7 @@ function renderMural(){
     }
     folderZone.innerHTML = `
       <div class="card-grid card-grid--albums card-grid--top">
-        ${matchesOrdenados.map(a => albumCardHTML(a, true)).join("")}
+        ${matchesOrdenados.map(a => albumCardHTML(a)).join("")}
       </div>
     `;
     stampApertures(folderZone);
@@ -737,7 +737,7 @@ function renderLatestAlbum(){
   });
 }
 
-function albumCardHTML(a, standalone = false){
+function albumCardHTML(a){
   const kids = children(a.id);
   const isFolder = kids.length > 0;
   const count = isFolder ? kids.length : albumPhotos(a.id).length;
@@ -750,9 +750,9 @@ function albumCardHTML(a, standalone = false){
   // título e só se diferenciam pelo subtitulo — sem isso viravam 2 cards
   // idênticos na vitrine
   let titleText = isFolder && a.subtitulo ? `${a.titulo} — ${a.subtitulo}` : a.titulo;
-  // fora da vitrine agrupada (busca, por ex.) não tem cabeçalho de
-  // categoria do lado pra dar contexto — "2026" sozinho não diz nada
-  if (standalone) titleText = albumDisplayName(a);
+  // "2026" sozinho nunca é suficiente, nem dentro da vitrine agrupada —
+  // sempre carimba o nome do evento junto ("Festa de Santa Rita 2026")
+  if (/^\d{4}$/.test(a.titulo)) titleText = albumDisplayName(a);
   // só álbum de topo tem seletor de categoria — é o que decide o grupo
   // dele na vitrine principal; sub-álbum vive dentro da pasta do pai
   const categorySelect = !a.parent ? (() => {
