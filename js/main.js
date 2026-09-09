@@ -1438,9 +1438,11 @@ $("#createAlbumSubmit").addEventListener("click", async () => {
 // antes de mandar pro GitHub, pra nunca subir arquivo gigante de câmera
 // nem foto sem marca d'água
 // ============================================================
-const ADMIN_UPLOAD_MAX_DIM = 2000;
-const ADMIN_UPLOAD_QUALITY = 0.86;
-const ADMIN_WATERMARK_SRC = "images/brand/logo-color-transparent.png";
+// mesmos números do script que gera as fotos que já estão no site
+// (scripts auxiliares fora do repo) — pra toda foto nova sair igual
+const ADMIN_UPLOAD_MAX_DIM = 1440;
+const ADMIN_UPLOAD_QUALITY = 0.88;
+const ADMIN_WATERMARK_SRC = "images/brand/assinatura-white-transparent.png";
 
 function loadImageFromSrc(src){
   return new Promise((resolve, reject) => {
@@ -1473,7 +1475,7 @@ async function processImageForUpload(file){
     const logoW = width * 0.16;
     const logoH = logoW * (logo.height / logo.width);
     const margin = width * 0.025;
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.88;
     ctx.drawImage(logo, width - logoW - margin, height - logoH - margin, logoW, logoH);
     ctx.globalAlpha = 1;
   } catch { /* sem logo disponível, sobe sem marca d'água mesmo */ }
