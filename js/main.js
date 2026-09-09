@@ -432,6 +432,36 @@ let activeCategory = "todos";
 let searchQuery = "";
 let navStack = [];
 
+// ============================================================
+// Navegação por URL — cada álbum tem seu próprio endereço
+// (#/album-id), então o botão voltar do navegador funciona, dá pra
+// atualizar a página sem se perder, e dá pra mandar o link direto de
+// um álbum. Sem isso tudo acontecia só "por dentro" da mesma página.
+// ============================================================
+function albumIdFromHash(){
+  const m = location.hash.match(/^#\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+function applyRoute(albumId, { scroll = true } = {}){
+  navStack = albumId && getAlbum(albumId) ? breadcrumbFor(albumId).map(a => a.id) : [];
+  searchQuery = "";
+  if (searchInput) searchInput.value = "";
+  renderMural();
+  renderLatestAlbum();
+  if (scroll) $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// usado por qualquer clique que leva pra dentro de um álbum — troca o
+// endereço (o que já cria uma parada no histórico do navegador sozinho)
+function goToAlbum(albumId){
+  const target = albumId ? `#/${albumId}` : "";
+  if ((location.hash || "") === target){ applyRoute(albumId); return; }
+  location.hash = target;
+}
+
+window.addEventListener("hashchange", () => applyRoute(albumIdFromHash()));
+
 function photoMatchesCategory(p, categoryId){
   if (categoryId === "todos") return true;
   const album = getAlbum(p.album);
@@ -469,11 +499,11 @@ function renderBreadcrumb(){
   const current = getAlbum(navStack[navStack.length - 1]);
   breadcrumbEl.innerHTML = `
     <button class="nav__album__back" id="navAlbumBack" data-hover>← Voltar</button>
-    <h3 class="nav__album__title">${current.titulo}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
+    <h3 class="nav__album__title">${albumDisplayName(current)}${current.subtitulo ? " — " + current.subtitulo : ""}</h3>
   `;
   $("#navAlbumBack").addEventListener("click", () => {
-    navStack = navStack.length > 1 ? navStack.slice(0, -1) : resolveSingleAlbumChain(activeCategory);
-    renderMural();
+    const target = navStack.length > 1 ? navStack[navStack.length - 2] : null;
+    goToAlbum(target);
   });
 }
 
@@ -520,12 +550,7 @@ function renderMural(){
     wireAdminAlbumDelete(folderZone);
     wireAdminAlbumCategory(folderZone);
     $$(".card", folderZone).forEach(el => {
-      el.addEventListener("click", () => {
-        navStack.push(el.dataset.id);
-        searchQuery = ""; searchInput.value = "";
-        renderMural();
-        $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      el.addEventListener("click", () => goToAlbum(el.dataset.id));
     });
     return;
   }
@@ -628,11 +653,7 @@ function renderMural(){
     wireAdminAlbumDelete(folderZone);
     wireAdminAlbumCategory(folderZone);
     $$(".card", folderZone).forEach(el => {
-      el.addEventListener("click", () => {
-        navStack.push(el.dataset.id);
-        renderMural();
-        $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+      el.addEventListener("click", () => goToAlbum(el.dataset.id));
     });
   }
 
@@ -728,12 +749,7 @@ function renderLatestAlbum(){
   stampApertures(el);
   observeCards(el);
   $$(".card", el).forEach(card => {
-    card.addEventListener("click", () => {
-      navStack = breadcrumbFor(card.dataset.id).map(x => x.id);
-      searchQuery = ""; searchInput.value = "";
-      renderMural();
-      $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    card.addEventListener("click", () => goToAlbum(card.dataset.id));
   });
 }
 
@@ -894,12 +910,7 @@ function renderTimeline(){
   track.style.transform = "translateX(0px)";
 
   $$(".filmreel[data-id]", track).forEach(reel => {
-    reel.addEventListener("click", () => {
-      navStack = breadcrumbFor(reel.dataset.id).map(a => a.id);
-      searchQuery = ""; searchInput.value = "";
-      renderMural();
-      $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    reel.addEventListener("click", () => goToAlbum(reel.dataset.id));
   });
 }
 
@@ -1017,22 +1028,17 @@ function updateLightbox(){
   lbLocal.textContent = p.local || "";
 
   const chain = breadcrumbFor(p.album);
-  lbAlbumTitle.textContent = chain[chain.length - 1].titulo;
+  lbAlbumTitle.textContent = albumDisplayName(chain[chain.length - 1]);
 
   lbTreeList.innerHTML = chain.map((a, i) => `
     <div class="lightbox__tree-item ${i === chain.length - 1 ? "is-current" : ""}" style="--depth:${i};">
-      <button data-id="${a.id}">${a.titulo}</button>
+      <button data-id="${a.id}">${albumDisplayName(a)}</button>
     </div>
   `).join("");
   $$("button", lbTreeList).forEach(btn => {
     btn.addEventListener("click", () => {
       closeLightbox();
-      const targetChain = breadcrumbFor(btn.dataset.id);
-      navStack = targetChain.map(a => a.id);
-      searchQuery = "";
-      searchInput.value = "";
-      renderMural();
-      $(".board").scrollIntoView({ behavior: "smooth" });
+      goToAlbum(btn.dataset.id);
     });
   });
 
@@ -1041,6 +1047,7 @@ function updateLightbox(){
     chip.addEventListener("click", () => {
       closeLightbox();
       navStack = [];
+      if (location.hash) history.replaceState(null, "", location.pathname + location.search);
       activeCategory = "todos";
       searchInput.value = chip.dataset.tag;
       searchQuery = chip.dataset.tag;
@@ -1417,8 +1424,7 @@ $("#createAlbumSubmit").addEventListener("click", async () => {
     ALBUMS.push({ id: res.albumId, parent: null, categoria, titulo, subtitulo, cover: "", descricao: "" });
     closeCreateAlbumModal();
     alert(`Álbum "${titulo}" criado! Ele só aparece na vitrine depois de ter pelo menos 1 foto — entre nele e use "Subir foto".`);
-    navStack = [res.albumId];
-    renderMural();
+    goToAlbum(res.albumId);
   } catch (err){
     errEl.textContent = err.message;
     errEl.style.display = "block";
@@ -1508,8 +1514,7 @@ initHero();
 initSectionBackgrounds();
 initParallax();
 initHeroPeek();
-renderLatestAlbum();
-renderMural();
+applyRoute(albumIdFromHash(), { scroll: false });
 renderTimeline();
 initFilmstripNav();
 observeReveals();
