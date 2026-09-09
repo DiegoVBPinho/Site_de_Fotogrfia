@@ -879,7 +879,7 @@ function renderTimeline(){
       <figure class="filmreel" data-id="${a.id}" data-hover>
         <img src="${a.cover}" alt="${a.titulo}" loading="lazy">
         <figcaption class="filmreel__cap">
-          <p class="filmreel__title">${a.titulo} (${count} foto${count === 1 ? "" : "s"})</p>
+          <p class="filmreel__title">${albumDisplayName(a)} (${count} foto${count === 1 ? "" : "s"})</p>
           <p class="filmreel__date">${formatDateShort(date)}</p>
         </figcaption>
       </figure>
