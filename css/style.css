@@ -63,6 +63,7 @@ ul{ list-style:none; margin:0; padding:0; }
 }
 .section__title span{ color: var(--orange); }
 .section__desc{ color: rgba(234,233,232,.55); font-size: 1.02rem; max-width: 46ch; margin: .9rem 0 0; }
+.section__head{ margin-bottom: 3rem; }
 
 /* sem max-width: o padding em vw já escala com a tela — em monitor
    grande, a grade só ganha mais colunas (auto-fill), nunca sobra
@@ -334,6 +335,12 @@ ul{ list-style:none; margin:0; padding:0; }
 .cat-tile.active .cat-tile__label{ color: var(--orange); font-weight:700; }
 
 .mural-divider{ font-family: var(--font-mono); font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color: rgba(234,233,232,.45); margin: 2.2rem 0 1.2rem; }
+.mural-divider--category{
+  display:flex; align-items:center; gap:1rem;
+  font-size:.85rem; letter-spacing:.1em; color: var(--cream); margin: 2.6rem 0 1.4rem;
+}
+.mural-divider--category:first-child{ margin-top:0; }
+.mural-divider--category::after{ content:""; flex:1; height:1px; background: linear-gradient(90deg, var(--orange), rgba(216,117,42,0)); }
 .no-results{ color: rgba(234,233,232,.45); padding: 3rem 0; }
 
 /* ============================================================
@@ -389,7 +396,7 @@ ul{ list-style:none; margin:0; padding:0; }
 }
 .card__title{
   margin:0; font-family: var(--font-display); font-weight:700; font-size: .96rem; line-height:1.2;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+  min-width:0;
 }
 .card__parent{
   margin: 0 0 .15rem; font-family: var(--font-mono); font-size: .58rem; letter-spacing:.05em; text-transform: uppercase;
@@ -725,6 +732,20 @@ body.admin-mode .card__admin-delete{ display:flex; }
   backdrop-filter: blur(6px);
 }
 .card__admin-delete:hover{ background: #e8635a; color: var(--navy-black); }
+
+.card__admin-category{
+  position:absolute; z-index:4; top:.5rem; left:.5rem; max-width: calc(100% - 3.2rem);
+  padding:.3rem .55rem; border-radius:999px; font-size:.66rem; font-family: var(--font-mono);
+  background: rgba(6,15,24,.7); border:1px solid var(--glass-border); color: var(--cream);
+  backdrop-filter: blur(6px); cursor:pointer;
+}
+body.admin-mode .card__admin-category{ display:block; }
+
+.admin-upload{ align-items:center; gap:1rem; margin-top: 1.4rem; flex-wrap:wrap; }
+.admin-upload__btn{ position:relative; cursor:pointer; }
+.admin-upload__status{ font-family: var(--font-mono); font-size:.74rem; color: rgba(234,233,232,.55); }
+.card__admin-category:hover{ border-color: var(--orange); }
+.card__admin-category option{ background: var(--navy-deep); color: var(--cream); }
 
 /* ============================================================
    Reduced motion — desliga o que não é essencial

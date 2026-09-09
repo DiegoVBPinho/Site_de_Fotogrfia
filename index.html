@@ -66,10 +66,13 @@
 <!-- ===================== MURAL (ÁLBUNS) ===================== -->
 <section class="section" id="mural">
   <div class="section__bg" id="muralBg"></div>
-  <div class="latest-album" id="latestAlbum"></div>
   <div class="section__head reveal">
+    <p class="eyebrow">Portfólio</p>
     <h2 class="section__title">Álbuns de Fotos</h2>
+    <p class="section__desc">Do clique mais recente ao mais antigo — separados por tipo de trabalho: retratos, festas, drone e mais.</p>
+    <button class="admin-btn admin-only" id="createAlbumBtn" style="margin-top:1.4rem;" data-hover>+ Criar álbum</button>
   </div>
+  <div class="latest-album" id="latestAlbum"></div>
 
   <div class="board reveal">
     <div id="folderZone"></div>
@@ -181,6 +184,20 @@
     <input type="password" id="adminPasswordInput" placeholder="Senha" autocomplete="off">
     <button class="admin-btn admin-modal__submit" id="adminLoginBtn" data-hover>Entrar</button>
     <p class="admin-modal__error" id="adminModalError" style="display:none;"></p>
+  </div>
+</div>
+
+<div class="admin-modal" id="createAlbumModal">
+  <div class="admin-modal__box">
+    <button class="admin-modal__close" id="createAlbumClose" aria-label="Fechar" data-hover>✕</button>
+    <p class="eyebrow" style="margin-bottom:.3rem;">Novo álbum</p>
+    <h3 style="margin:0 0 1.2rem;">Criar álbum</h3>
+    <input type="text" id="createAlbumTitulo" placeholder="Título (ex: Marcela)" autocomplete="off">
+    <input type="text" id="createAlbumSubtitulo" placeholder="Subtítulo — opcional (ex: 2026)" autocomplete="off" style="margin-top:-.3rem;">
+    <select id="createAlbumCategoria" style="width:100%; padding:.75rem 1rem; margin-bottom:.9rem; border-radius:10px; background:rgba(234,233,232,.06); border:1px solid var(--glass-border); color:var(--cream); font-size:.95rem;"></select>
+    <input type="text" id="createAlbumNovaCategoria" placeholder="Nome da categoria nova" autocomplete="off" style="display:none;">
+    <button class="admin-btn admin-modal__submit" id="createAlbumSubmit" data-hover>Criar</button>
+    <p class="admin-modal__error" id="createAlbumError" style="display:none;"></p>
   </div>
 </div>
 

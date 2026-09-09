@@ -104,6 +104,30 @@ async function putFile(path, content, sha, message){
   return res.json();
 }
 
+// pra imagem — o conteúdo já chega em base64 do navegador, não pode
+// passar pelo Buffer.from(..., "utf-8") do putFile (corrompe binário)
+async function putBinaryFile(path, base64Content, message){
+  const { repo, branch } = repoInfo();
+  const res = await fetch(`${GITHUB_API}/repos/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: { ...ghHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ message, content: base64Content, branch }),
+  });
+  if (!res.ok){
+    const errText = await res.text().catch(() => "");
+    throw new Error(`Não consegui subir ${path} no GitHub (HTTP ${res.status}). ${errText}`);
+  }
+  return res.json();
+}
+
+function slugify(s){
+  return (s || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+}
+
 async function deleteFile(path, message){
   const { repo, branch } = repoInfo();
   // precisa do sha atual do arquivo pra poder apagar
@@ -237,6 +261,98 @@ exports.handler = async (event) => {
         `Admin: troca capa do álbum ${albumId}`);
 
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === "set-category"){
+      const { albumId, categoria } = body;
+      if (!albumId || !categoria) throw new Error("albumId e categoria obrigatórios.");
+
+      const albuns = await loadCSV("csv/Albuns.csv");
+      const album = albuns.objects.find(a => a.album_id === albumId);
+      if (!album) throw new Error("Álbum não encontrado.");
+      album.categoria = categoria;
+
+      await putFile("csv/Albuns.csv", objectsToCSV(albuns.headers, albuns.objects), albuns.sha,
+        `Admin: muda categoria do álbum ${albumId} para ${categoria}`);
+
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true }) };
+    }
+
+    if (action === "create-album"){
+      const { titulo, subtitulo, categoria, albumPai } = body;
+      if (!titulo || !categoria) throw new Error("Título e categoria são obrigatórios.");
+
+      const albuns = await loadCSV("csv/Albuns.csv");
+      if (albumPai && !albuns.objects.some(a => a.album_id === albumPai)){
+        throw new Error("Álbum-pai não existe.");
+      }
+
+      const existing = new Set(albuns.objects.map(a => a.album_id));
+      const base = slugify(titulo) || "album";
+      let id = base, n = 2;
+      while (existing.has(id)) id = `${base}-${n++}`;
+
+      albuns.objects.push({
+        album_id: id,
+        album_pai: albumPai || "",
+        categoria,
+        titulo,
+        subtitulo: subtitulo || "",
+        capa: "",
+        descricao: "",
+      });
+
+      await putFile("csv/Albuns.csv", objectsToCSV(albuns.headers, albuns.objects), albuns.sha,
+        `Admin: cria álbum ${id}`);
+
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, albumId: id }) };
+    }
+
+    if (action === "upload-photo"){
+      const { albumId, filename, dataBase64, titulo, local, tags } = body;
+      if (!albumId || !dataBase64) throw new Error("albumId e imagem são obrigatórios.");
+
+      const albuns = await loadCSV("csv/Albuns.csv");
+      const album = albuns.objects.find(a => a.album_id === albumId);
+      if (!album) throw new Error("Álbum não encontrado.");
+
+      const fotos = await loadCSV("csv/Fotos.csv");
+      const usedImagens = new Set(fotos.objects.map(r => r.imagem));
+      const usedIds = new Set(fotos.objects.map(r => r.foto_id));
+      const ext = /\.([a-z0-9]{2,5})$/i.test(filename || "") ? filename.split(".").pop().toLowerCase() : "jpg";
+
+      let n = fotos.objects.filter(r => r.album_id === albumId).length + 1;
+      let imagePath, fotoId;
+      do {
+        const numStr = String(n).padStart(2, "0");
+        imagePath = `images/${albumId}/${albumId}-${numStr}.${ext}`;
+        fotoId = `${albumId}-${numStr}`;
+        n++;
+      } while (usedImagens.has(imagePath) || usedIds.has(fotoId));
+
+      await putBinaryFile(imagePath, dataBase64, `Admin: adiciona foto ${fotoId}`);
+
+      const today = new Date().toISOString().slice(0, 10);
+      fotos.objects.push({
+        foto_id: fotoId,
+        album_id: albumId,
+        imagem: imagePath,
+        data: today,
+        titulo: titulo || album.titulo,
+        local: local || "",
+        tags: tags || "",
+      });
+      await putFile("csv/Fotos.csv", objectsToCSV(fotos.headers, fotos.objects), fotos.sha,
+        `Admin: adiciona foto ${fotoId} ao álbum ${albumId}`);
+
+      if (!album.capa){
+        const albunsFresh = await loadCSV("csv/Albuns.csv");
+        const merged = albunsFresh.objects.map(a => a.album_id === albumId ? { ...a, capa: imagePath } : a);
+        await putFile("csv/Albuns.csv", objectsToCSV(albunsFresh.headers, merged), albunsFresh.sha,
+          `Admin: define capa do álbum ${albumId}`);
+      }
+
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, fotoId, imagem: imagePath }) };
     }
 
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "Ação desconhecida." }) };

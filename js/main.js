@@ -37,6 +37,29 @@ function albumPhotosRecursive(id){
   return list;
 }
 function albumHasContent(id){ return albumPhotosRecursive(id).length > 0; }
+// nomes bonitos pra cada categoria (coluna "categoria" do Albuns.csv) —
+// usado só pra agrupar a vitrine principal por tipo de trabalho
+const CATEGORY_LABELS = {
+  retratos: "Retratos",
+  "festa-particular": "Festas & Eventos",
+  "santa-rita": "Festa de Santa Rita",
+  drone: "Drone",
+  carnaval: "Carnaval",
+  natureza: "Natureza",
+  hacktown: "Hacktown",
+  "feirao-folclorico": "Feirão Folclórico",
+  profissoes: "Profissões",
+};
+function categoryLabel(slug){
+  if (!slug) return "Outros";
+  return CATEGORY_LABELS[slug] || (slug.charAt(0).toUpperCase() + slug.slice(1));
+}
+// "2026" sozinho só faz sentido dentro da vitrine agrupada por categoria
+// (que já mostra "FESTA DE SANTA RITA" do lado) — em qualquer outro lugar
+// (busca, spotlight, rótulo de pai) carimba o nome do evento junto
+function albumDisplayName(a){
+  return /^\d{4}$/.test(a.titulo) ? `${categoryLabel(a.categoria)} ${a.titulo}` : a.titulo;
+}
 function breadcrumbFor(albumId){
   const chain = [];
   let current = getAlbum(albumId);
@@ -51,22 +74,36 @@ function albumOwnDate(id){
   if (!photos.length) return null;
   return photos.reduce((min, p) => (p.data < min ? p.data : min), photos[0].data);
 }
-function catLabel(id){ return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
-function albumEffectiveDate(id){
-  const own = albumOwnDate(id);
-  if (own) return own;
-  const recPhotos = albumPhotosRecursive(id);
-  if (!recPhotos.length) return null;
-  return recPhotos.reduce((min, p) => (p.data < min ? p.data : min), recPhotos[0].data);
+// mais nova das fotos PRÓPRIAS do álbum (sem descer pros filhos) — usada
+// pra achar o "álbum mais recente": um álbum tipo "Aleatórios" que vive
+// ganhando foto nova de vez em quando precisa contar pela foto mais
+// nova, não pela mais velha
+function albumOwnLatestDate(id){
+  const photos = albumPhotos(id);
+  if (!photos.length) return null;
+  return photos.reduce((max, p) => (p.data > max ? p.data : max), photos[0].data);
 }
+function catLabel(id){ return (CATEGORIAS.find(c => c.id === id) || {}).label || id; }
+// data mais recente entre todas as fotos do álbum, incluindo sub-álbuns —
+// é o que decide a ordem "mais atual primeiro" na vitrine
+function albumEffectiveDate(id){
+  const photos = albumPhotosRecursive(id);
+  if (!photos.length) return null;
+  return photos.reduce((max, p) => (p.data > max ? p.data : max), photos[0].data);
+}
+// mais recente primeiro — quem visita o site quer ver o trabalho atual,
+// não cavar até achar
 function sortAlbumsByDate(albums){
   return [...albums].sort((a, b) => {
     const da = albumEffectiveDate(a.id), db = albumEffectiveDate(b.id);
     if (!da && !db) return 0;
     if (!da) return 1;
     if (!db) return -1;
-    return new Date(da) - new Date(db);
+    return new Date(db) - new Date(da);
   });
+}
+function sortPhotosByDate(photos){
+  return [...photos].sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 function resolveSingleAlbumChain(categoryId){
   if (categoryId === "todos") return [];
@@ -402,14 +439,19 @@ function photoMatchesCategory(p, categoryId){
   return (p.tags || []).includes(categoryId);
 }
 
+// tira acento pra "julia" achar "Júlia" — gente digita sem acento o tempo todo
+function normalizeSearch(s){
+  return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
 function matchesSearch(p, query){
   if (!query) return true;
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearch(query.trim());
   const album = getAlbum(p.album);
-  const haystack = [
+  const haystack = normalizeSearch([
     p.titulo, p.local, ...(p.tags || []),
     album ? album.titulo : "", album ? album.subtitulo : "",
-  ].join(" ").toLowerCase();
+  ].join(" "));
   return haystack.includes(q);
 }
 
@@ -461,8 +503,8 @@ function renderMural(){
         const titleHay = `${a.titulo} ${a.subtitulo || ""}`.toLowerCase();
         if (titleHay.includes(searchQuery.trim().toLowerCase())) return true;
         return albumPhotos(a.id).some(p => matchesSearch(p, searchQuery));
-      })
-      .sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
+      });
+    const matchesOrdenados = sortAlbumsByDate(matches);
 
     if (!matches.length){
       folderZone.innerHTML = `<p class="no-results">Nenhum álbum encontrado para "${searchQuery}".</p>`;
@@ -470,12 +512,13 @@ function renderMural(){
     }
     folderZone.innerHTML = `
       <div class="card-grid card-grid--albums card-grid--top">
-        ${matches.map(a => albumCardHTML(a)).join("")}
+        ${matchesOrdenados.map(a => albumCardHTML(a, true)).join("")}
       </div>
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
     wireAdminAlbumDelete(folderZone);
+    wireAdminAlbumCategory(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -504,7 +547,9 @@ function renderMural(){
       if (!byAlbum.has(p.album)) { byAlbum.set(p.album, { album: getAlbum(p.album), photos: [] }); groups.push(byAlbum.get(p.album)); }
       byAlbum.get(p.album).photos.push(p);
     });
-    groups.sort((a, b) => (a.album ? a.album.titulo : "").localeCompare(b.album ? b.album.titulo : "", "pt-BR"));
+    // mais recente primeiro, tanto o álbum quanto as fotos dentro dele
+    groups.forEach(g => { g.photos = sortPhotosByDate(g.photos); });
+    groups.sort((a, b) => new Date(b.photos[0].data) - new Date(a.photos[0].data));
     const showTitles = groups.length > 1;
 
     muralGrid.innerHTML = groups.map(g => {
@@ -514,8 +559,9 @@ function renderMural(){
         <div class="mobile-album-block" data-group="${g.album ? g.album.id : ""}">
           ${showTitles && g.album ? (() => {
             const parent = g.album.parent ? getAlbum(g.album.parent) : null;
-            const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
-            return `<p class="mobile-album-block__title">${parentLabel ? `<span class="mobile-album-block__parent">${parentLabel}</span>` : ""}${g.album.titulo}${g.album.subtitulo ? " — " + g.album.subtitulo : ""}</p>`;
+            const parentLabel = parent ? albumDisplayName(parent) : "";
+            const ownTitle = parent ? g.album.titulo : albumDisplayName(g.album);
+            return `<p class="mobile-album-block__title">${parentLabel ? `<span class="mobile-album-block__parent">${parentLabel}</span>` : ""}${ownTitle}${g.album.subtitulo ? " — " + g.album.subtitulo : ""}</p>`;
           })() : ""}
           <div class="mobile-album-block__frames">${shown.map(p => photoCardHTML(p)).join("")}</div>
           ${rest > 0 ? `<button class="mobile-album-block__more" data-group="${g.album ? g.album.id : ""}" data-hover>Ver mais ${rest} foto${rest === 1 ? "" : "s"} <span class="aperture"></span></button>` : ""}
@@ -538,23 +584,49 @@ function renderMural(){
   }
 
   const currentParent = navStack.length ? navStack[navStack.length - 1] : null;
-  // raiz: TODOS os álbuns com foto própria, de qualquer nível, em ordem
-  // alfabética — nada de esconder sub-álbum atrás de clique em pasta
+  // raiz: só álbuns de topo (sem album_pai) — eventos com vários sub-álbuns
+  // (Drone, Festa de Santa Rita, Feirão Folclórico) viram 1 card-pasta em
+  // vez de espalhar cada sub-álbum solto na vitrine. Álbuns de pessoa não
+  // têm pai, então continuam aparecendo soltos igual antes. A busca não
+  // usa esse filtro — continua achando qualquer álbum, de qualquer nível.
   let childAlbums = currentParent === null
-    ? ALBUMS.filter(a => albumPhotos(a.id).length > 0).sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"))
+    ? sortAlbumsByDate(ALBUMS.filter(a => a.parent === null && albumHasContent(a.id)))
     : sortAlbumsByDate(children(currentParent));
-  const ownPhotos = currentParent ? albumPhotos(currentParent) : [];
+  const ownPhotos = currentParent ? sortPhotosByDate(albumPhotos(currentParent)) : [];
 
   if (childAlbums.length){
+    // na raiz agrupa por categoria (tipo de trabalho) em vez de uma vitrine
+    // só — assim dá pra folhear "Retratos" à parte de "Festas", por ex.,
+    // e faz sentido um álbum de 1 foto ao lado de um de 30 dentro do mesmo grupo
+    const albumsHTML = currentParent === null
+      ? (() => {
+          const groups = new Map();
+          childAlbums.forEach(a => {
+            const key = a.categoria || "";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(a);
+          });
+          const sortedKeys = [...groups.keys()].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b), "pt-BR"));
+          return sortedKeys.map(key => `
+            <p class="mural-divider mural-divider--category">${categoryLabel(key)}</p>
+            <div class="card-grid card-grid--albums card-grid--top" style="margin-bottom: 2.4rem;">
+              ${groups.get(key).map(a => albumCardHTML(a)).join("")}
+            </div>
+          `).join("")
+        })()
+      : `
+        <div class="card-grid card-grid--albums" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
+          ${childAlbums.map(a => albumCardHTML(a)).join("")}
+        </div>
+      `;
     folderZone.innerHTML = `
       ${ownPhotos.length ? `<p class="mural-divider">Álbuns dentro deste álbum</p>` : ""}
-      <div class="card-grid card-grid--albums ${currentParent === null ? "card-grid--top" : ""}" style="margin-bottom: ${ownPhotos.length ? "2rem" : "0"};">
-        ${childAlbums.map(a => albumCardHTML(a)).join("")}
-      </div>
+      ${albumsHTML}
     `;
     stampApertures(folderZone);
     observeCards(folderZone);
     wireAdminAlbumDelete(folderZone);
+    wireAdminAlbumCategory(folderZone);
     $$(".card", folderZone).forEach(el => {
       el.addEventListener("click", () => {
         navStack.push(el.dataset.id);
@@ -581,6 +653,29 @@ function renderMural(){
   } else {
     muralGrid.innerHTML = "";
   }
+
+  // botão de subir foto — só faz sentido com um álbum de destino claro,
+  // então só aparece quando o admin está dentro de um álbum específico
+  let uploadZone = $("#adminUploadZone");
+  if (!uploadZone){
+    uploadZone = document.createElement("div");
+    uploadZone.id = "adminUploadZone";
+    uploadZone.className = "admin-only admin-upload";
+    $(".board").appendChild(uploadZone);
+  }
+  if (currentParent){
+    const album = getAlbum(currentParent);
+    uploadZone.innerHTML = `
+      <label class="admin-btn admin-upload__btn" data-hover>
+        + Subir foto pra "${album.titulo}"
+        <input type="file" accept="image/*" id="adminUploadInput" hidden>
+      </label>
+      <span class="admin-upload__status" id="adminUploadStatus"></span>
+    `;
+    wireAdminUpload(currentParent);
+  } else {
+    uploadZone.innerHTML = "";
+  }
 }
 
 // ============================================================
@@ -592,7 +687,7 @@ function renderLatestAlbum(){
   if (!el) return;
   const candidates = ALBUMS
     .filter(a => albumPhotos(a.id).length > 0)
-    .map(a => ({ album: a, date: albumOwnDate(a.id) }))
+    .map(a => ({ album: a, date: albumOwnLatestDate(a.id) }))
     .filter(x => x.date)
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -614,15 +709,16 @@ function renderLatestAlbum(){
   // mais recente sempre na esquerda
   el.innerHTML = `<div class="latest-album__row">${featured.map(({ a, date }, i) => {
     const parent = a.parent ? getAlbum(a.parent) : null;
-    const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
+    const parentLabel = parent ? albumDisplayName(parent) : "";
     const count = albumPhotosRecursive(a.id).length;
+    const displayTitle = albumDisplayName(a);
     return `
       <figure class="card latest-album__card" data-id="${a.id}" data-hover>
         <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
         <div class="card__overlay latest-album__overlay">
           <p class="latest-album__eyebrow">${i === 0 ? "Álbum mais recente" : "Também novo"}</p>
           ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
-          <h3 class="latest-album__title">${a.titulo}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
+          <h3 class="latest-album__title">${displayTitle}${a.subtitulo ? " — " + a.subtitulo : ""}</h3>
           <p class="latest-album__date">${formatDateLong(date)} · ${count} foto${count === 1 ? "" : "s"}</p>
         </div>
       </figure>
@@ -641,7 +737,7 @@ function renderLatestAlbum(){
   });
 }
 
-function albumCardHTML(a){
+function albumCardHTML(a, standalone = false){
   const kids = children(a.id);
   const isFolder = kids.length > 0;
   const count = isFolder ? kids.length : albumPhotos(a.id).length;
@@ -649,20 +745,69 @@ function albumCardHTML(a){
   // sem a árvore de navegação, o card precisa dizer sozinho de onde é —
   // "Júlia" sem contexto não diz nada; "Júlia" + "Maquiagem" diz
   const parent = a.parent ? getAlbum(a.parent) : null;
-  const parentLabel = parent ? `${parent.titulo}${parent.subtitulo ? " " + parent.subtitulo : ""}` : "";
+  const parentLabel = parent ? albumDisplayName(parent) : "";
+  // pastas-evento (Festa de Santa Rita 2025 vs 2026, por ex.) têm o mesmo
+  // título e só se diferenciam pelo subtitulo — sem isso viravam 2 cards
+  // idênticos na vitrine
+  let titleText = isFolder && a.subtitulo ? `${a.titulo} — ${a.subtitulo}` : a.titulo;
+  // fora da vitrine agrupada (busca, por ex.) não tem cabeçalho de
+  // categoria do lado pra dar contexto — "2026" sozinho não diz nada
+  if (standalone) titleText = albumDisplayName(a);
+  // só álbum de topo tem seletor de categoria — é o que decide o grupo
+  // dele na vitrine principal; sub-álbum vive dentro da pasta do pai
+  const categorySelect = !a.parent ? (() => {
+    const known = new Set(Object.keys(CATEGORY_LABELS));
+    if (a.categoria) known.add(a.categoria);
+    const opts = [...known].sort((x, y) => categoryLabel(x).localeCompare(categoryLabel(y), "pt-BR"))
+      .map(k => `<option value="${k}" ${a.categoria === k ? "selected" : ""}>${categoryLabel(k)}</option>`).join("");
+    return `
+      <select class="admin-only card__admin-category" data-album-category="${a.id}" data-hover title="Mudar categoria">
+        ${opts}
+        <option value="__nova__">+ Nova categoria…</option>
+      </select>
+    `;
+  })() : "";
   return `
     <figure class="card" data-id="${a.id}" data-hover>
       <button class="admin-only card__admin-delete" data-album-delete="${a.id}" title="Apagar álbum" data-hover>🗑</button>
+      ${categorySelect}
       <div class="card__media"><img src="${a.cover}" alt="${a.titulo}" loading="lazy"></div>
       <div class="card__overlay">
         ${parentLabel ? `<p class="card__parent">${parentLabel}</p>` : ""}
         <div class="card__row">
-          <h3 class="card__title">${a.titulo}</h3>
+          <h3 class="card__title">${titleText}</h3>
           <span class="card__count">${countLabel}</span>
         </div>
       </div>
     </figure>
   `;
+}
+
+// liga o seletor de categoria (só em álbum de topo, só aparece em modo admin)
+function wireAdminAlbumCategory(container){
+  $$("[data-album-category]", container).forEach(sel => {
+    sel.addEventListener("click", e => e.stopPropagation());
+    sel.addEventListener("change", async () => {
+      const albumId = sel.dataset.albumCategory;
+      let categoria = sel.value;
+      if (categoria === "__nova__"){
+        const nome = prompt("Nome da categoria nova:");
+        if (!nome || !nome.trim()){ renderMural(); return; }
+        categoria = nome.trim().normalize("NFD").replace(/[̀-ͯ]/g, "")
+          .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "");
+        if (!CATEGORY_LABELS[categoria]) CATEGORY_LABELS[categoria] = nome.trim();
+      }
+      try {
+        await adminCall("set-category", { albumId, categoria });
+        const album = getAlbum(albumId);
+        if (album) album.categoria = categoria;
+        renderMural();
+      } catch (err){
+        alert("Não deu: " + err.message);
+        renderMural();
+      }
+    });
+  });
 }
 
 // liga o botão de apagar álbum (fica escondido até entrar no modo admin)
@@ -1215,6 +1360,140 @@ async function adminSetCover(albumId, fotoId){
     await adminCall("set-cover", { albumId, fotoId });
     alert("Capa trocada! Pode levar 1-2 minutos pra atualizar no site publicado.");
   } catch (err){ alert("Não deu: " + err.message); }
+}
+
+// ============================================================
+// Criar álbum (admin) — escreve linha nova no Albuns.csv
+// ============================================================
+function slugifyCategoria(nome){
+  return nome.normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "");
+}
+
+function populateCreateAlbumCategorias(){
+  const sel = $("#createAlbumCategoria");
+  const cats = [...new Set([...Object.keys(CATEGORY_LABELS), ...ALBUMS.map(a => a.categoria).filter(Boolean)])]
+    .sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b), "pt-BR"));
+  sel.innerHTML = cats.map(c => `<option value="${c}">${categoryLabel(c)}</option>`).join("")
+    + `<option value="__nova__">+ Nova categoria…</option>`;
+}
+
+function openCreateAlbumModal(){
+  populateCreateAlbumCategorias();
+  $("#createAlbumTitulo").value = "";
+  $("#createAlbumSubtitulo").value = "";
+  $("#createAlbumNovaCategoria").value = "";
+  $("#createAlbumNovaCategoria").style.display = "none";
+  $("#createAlbumError").style.display = "none";
+  $("#createAlbumModal").classList.add("open");
+  $("#createAlbumTitulo").focus();
+}
+function closeCreateAlbumModal(){ $("#createAlbumModal").classList.remove("open"); }
+
+$("#createAlbumBtn").addEventListener("click", openCreateAlbumModal);
+$("#createAlbumClose").addEventListener("click", closeCreateAlbumModal);
+$("#createAlbumModal").addEventListener("click", (e) => { if (e.target.id === "createAlbumModal") closeCreateAlbumModal(); });
+$("#createAlbumCategoria").addEventListener("change", () => {
+  $("#createAlbumNovaCategoria").style.display = $("#createAlbumCategoria").value === "__nova__" ? "block" : "none";
+});
+
+$("#createAlbumSubmit").addEventListener("click", async () => {
+  const titulo = $("#createAlbumTitulo").value.trim();
+  const subtitulo = $("#createAlbumSubtitulo").value.trim();
+  let categoria = $("#createAlbumCategoria").value;
+  const errEl = $("#createAlbumError");
+  if (categoria === "__nova__"){
+    const nome = $("#createAlbumNovaCategoria").value.trim();
+    if (!nome){ errEl.textContent = "Digite o nome da categoria nova."; errEl.style.display = "block"; return; }
+    categoria = slugifyCategoria(nome);
+    CATEGORY_LABELS[categoria] = nome;
+  }
+  if (!titulo){ errEl.textContent = "Digite um título."; errEl.style.display = "block"; return; }
+
+  const btn = $("#createAlbumSubmit");
+  btn.disabled = true; btn.textContent = "Criando...";
+  try {
+    const res = await adminCall("create-album", { titulo, subtitulo, categoria });
+    ALBUMS.push({ id: res.albumId, parent: null, categoria, titulo, subtitulo, cover: "", descricao: "" });
+    closeCreateAlbumModal();
+    alert(`Álbum "${titulo}" criado! Ele só aparece na vitrine depois de ter pelo menos 1 foto — entre nele e use "Subir foto".`);
+    navStack = [res.albumId];
+    renderMural();
+  } catch (err){
+    errEl.textContent = err.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Criar";
+  }
+});
+
+// ============================================================
+// Subir foto (admin) — redimensiona e carimba a logo no navegador
+// antes de mandar pro GitHub, pra nunca subir arquivo gigante de câmera
+// nem foto sem marca d'água
+// ============================================================
+const ADMIN_UPLOAD_MAX_DIM = 2000;
+const ADMIN_UPLOAD_QUALITY = 0.86;
+const ADMIN_WATERMARK_SRC = "images/brand/logo-color-transparent.png";
+
+function loadImageFromSrc(src){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("não consegui carregar a imagem"));
+    img.src = src;
+  });
+}
+
+async function processImageForUpload(file){
+  const objectUrl = URL.createObjectURL(file);
+  let img;
+  try { img = await loadImageFromSrc(objectUrl); }
+  finally { URL.revokeObjectURL(objectUrl); }
+
+  let { width, height } = img;
+  if (width > ADMIN_UPLOAD_MAX_DIM || height > ADMIN_UPLOAD_MAX_DIM){
+    const scale = ADMIN_UPLOAD_MAX_DIM / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, width, height);
+
+  try {
+    const logo = await loadImageFromSrc(ADMIN_WATERMARK_SRC);
+    const logoW = width * 0.16;
+    const logoH = logoW * (logo.height / logo.width);
+    const margin = width * 0.025;
+    ctx.globalAlpha = 0.8;
+    ctx.drawImage(logo, width - logoW - margin, height - logoH - margin, logoW, logoH);
+    ctx.globalAlpha = 1;
+  } catch { /* sem logo disponível, sobe sem marca d'água mesmo */ }
+
+  const dataUrl = canvas.toDataURL("image/jpeg", ADMIN_UPLOAD_QUALITY);
+  return dataUrl.split(",")[1];
+}
+
+function wireAdminUpload(albumId){
+  const input = $("#adminUploadInput");
+  if (!input) return;
+  input.addEventListener("change", async () => {
+    const file = input.files[0];
+    if (!file) return;
+    const status = $("#adminUploadStatus");
+    status.textContent = "Preparando imagem...";
+    try {
+      const base64 = await processImageForUpload(file);
+      status.textContent = "Enviando...";
+      await adminCall("upload-photo", { albumId, filename: "foto.jpg", dataBase64: base64 });
+      status.textContent = "Enviada! Pode levar 1-2 minutos pra aparecer no site publicado.";
+      input.value = "";
+    } catch (err){
+      status.textContent = "Não deu: " + err.message;
+    }
+  });
 }
 
 if (adminPassword) setAdminMode(true);
