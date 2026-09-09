@@ -418,6 +418,17 @@ $$("#navLinks a").forEach(a => a.addEventListener("click", () => {
   navLinks.classList.remove("open");
 }));
 
+// "Contato" continua visível mesmo com o álbum em tela cheia — mas a
+// seção dele fica escondida nesse modo, então o clique primeiro sai
+// do álbum e só depois rola até lá (dá tempo do fade acontecer)
+$("#navContatoLink").addEventListener("click", (e) => {
+  if (albumViewActive){
+    e.preventDefault();
+    goToAlbum(null);
+    setTimeout(() => $("#contato").scrollIntoView({ behavior: "smooth" }), 380);
+  }
+});
+
 // ============================================================
 // Mural (álbuns aninhados)
 // ============================================================
@@ -449,7 +460,12 @@ function applyRoute(albumId, { scroll = true } = {}){
   if (searchInput) searchInput.value = "";
   renderMural();
   renderLatestAlbum();
-  if (scroll) $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
+  // só rola pro topo do álbum ao ENTRAR — ao sair (albumId nulo), a
+  // página inteira ficou congelada (overflow:hidden) no lugar exato de
+  // onde a pessoa clicou, então ela já reaparece ali sozinha. Forçar
+  // scroll aqui era o que jogava todo mundo de volta pro topo da
+  // vitrine, mesmo quem tinha entrado pela Linha do Tempo.
+  if (albumId && scroll) $(".board").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // usado por qualquer clique que leva pra dentro de um álbum — troca o
@@ -458,6 +474,52 @@ function goToAlbum(albumId){
   const target = albumId ? `#/${albumId}` : "";
   if ((location.hash || "") === target){ applyRoute(albumId); return; }
   location.hash = target;
+}
+
+// ativa/desativa o modo tela cheia com um fade — ao entrar, o próprio
+// #mural nasce transparente e some pra opacity:1; ao sair, primeiro
+// esmaece pra depois soltar a classe (senão o resto do site apareceria
+// de golpe embaixo, sem transição nenhuma)
+let albumViewActive = false;
+let albumViewSavedScrollY = 0;
+function setAlbumView(on){
+  if (on === albumViewActive) return;
+  albumViewActive = on;
+  const mural = document.getElementById("mural");
+  if (on){
+    // o overflow:hidden zera o scroll sozinho — guarda antes de travar
+    albumViewSavedScrollY = window.scrollY;
+    document.body.classList.add("album-view");
+    mural.style.opacity = "0";
+    // setTimeout(0) em vez de requestAnimationFrame — rAF não dispara
+    // com a aba em segundo plano, e isso não pode depender de a aba
+    // estar em foco pra funcionar
+    setTimeout(() => { mural.style.opacity = "1"; }, 20);
+  } else {
+    mural.style.opacity = "0";
+    setTimeout(() => {
+      document.body.classList.remove("album-view");
+      mural.style.opacity = "";
+      // um instante pro layout recalcular a altura da página (com o
+      // resto do site de volta) antes de tentar voltar pro lugar certo
+      setTimeout(() => { window.scrollTo(0, albumViewSavedScrollY); }, 20);
+    }, 350);
+  }
+}
+
+// título grande do álbum aberto, com espaço de verdade — só na vitrine
+// em tela cheia (a barra de cima já tem o "← Voltar" pequeno)
+function renderAlbumViewHead(){
+  const el = $("#albumViewHead");
+  if (!el) return;
+  if (!navStack.length){ el.innerHTML = ""; return; }
+  const current = getAlbum(navStack[navStack.length - 1]);
+  const count = albumPhotosRecursive(current.id).length;
+  el.innerHTML = `
+    <p class="eyebrow">${categoryLabel(current.categoria)}</p>
+    <h2 class="section__title">${albumDisplayName(current)}</h2>
+    <p class="section__desc">${count} foto${count === 1 ? "" : "s"}</p>
+  `;
 }
 
 window.addEventListener("hashchange", () => applyRoute(albumIdFromHash()));
@@ -512,9 +574,10 @@ function isMobileView(){ return window.innerWidth <= 780; }
 function renderMural(){
   // dentro de um álbum (e fora de busca) a vitrine toma a tela inteira,
   // tipo Flickr — some hero/linha do tempo/destaques até "Voltar"
-  document.body.classList.toggle("album-view", navStack.length > 0 && !searchQuery);
+  setAlbumView(navStack.length > 0 && !searchQuery);
 
   renderBreadcrumb();
+  renderAlbumViewHead();
   folderZone.innerHTML = "";
   photosDividerLabel.style.display = "none";
   muralGrid.className = "card-grid";

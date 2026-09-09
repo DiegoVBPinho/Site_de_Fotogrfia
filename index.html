@@ -31,10 +31,10 @@
       <button class="search-bar__clear" id="searchClear" style="display:none;" data-hover>limpar ✕</button>
     </div>
     <ul class="nav__links" id="navLinks">
-      <li><a href="#mural" data-hover>Álbuns</a></li>
-      <li><a href="#tempo" data-hover>Linha do Tempo</a></li>
-      <li><a href="#sobre" data-hover>Sobre mim</a></li>
-      <li><a href="#contato" data-hover>Contato</a></li>
+      <li class="nav__links__item"><a href="#mural" data-hover>Álbuns</a></li>
+      <li class="nav__links__item"><a href="#tempo" data-hover>Linha do Tempo</a></li>
+      <li class="nav__links__item"><a href="#sobre" data-hover>Sobre mim</a></li>
+      <li class="nav__links__item"><a href="#contato" id="navContatoLink" data-hover>Contato</a></li>
     </ul>
   </div>
   <button class="nav__toggle" id="navToggle" aria-label="Abrir menu"><span></span></button>
@@ -74,6 +74,7 @@
   </div>
   <div class="latest-album" id="latestAlbum"></div>
 
+  <div class="album-view__head" id="albumViewHead"></div>
   <div class="board reveal">
     <div id="folderZone"></div>
     <p class="mural-divider" id="photosDividerLabel" style="display:none;">Fotos deste álbum</p>

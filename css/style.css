@@ -662,8 +662,11 @@ body.album-view #sobre,
 body.album-view .footer,
 body.album-view .latest-album,
 body.album-view #mural > .section__head,
-body.album-view .nav__links,
 body.album-view .search-bar--nav{ display: none; }
+/* só "Contato" continua visível na barra — o resto dos links aponta
+   pra seções que somem nesse modo */
+body.album-view .nav__links__item{ display: none; }
+body.album-view .nav__links__item:has(#navContatoLink){ display: block; }
 body.album-view .nav{
   background: rgba(6,15,24,.75); backdrop-filter: blur(18px) saturate(140%);
   border-bottom: 1px solid rgba(234,233,232,.08); padding: 1rem 5vw;
@@ -672,6 +675,15 @@ body.album-view #mural{
   position: fixed; inset: 0; z-index: 50; overflow-y: auto;
   background: var(--navy-black);
 }
+/* fade suave ao abrir/fechar — dá a sensação de trocar de tela, não
+   de um corte seco (JS controla quando entra/sai via opacity) */
+#mural{ transition: opacity .35s var(--ease); }
+
+.album-view__head{ display:none; }
+body.album-view .album-view__head{
+  display:block; margin: 0 0 3rem;
+}
+.album-view__head .eyebrow{ margin-bottom:.5rem; }
 
 /* ============================================================
    Barra inferior (celular)
