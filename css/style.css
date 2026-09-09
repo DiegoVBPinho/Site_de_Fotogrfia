@@ -662,7 +662,8 @@ body.album-view #sobre,
 body.album-view .footer,
 body.album-view .latest-album,
 body.album-view #mural > .section__head,
-body.album-view .nav__links{ display: none; }
+body.album-view .nav__links,
+body.album-view .search-bar--nav{ display: none; }
 body.album-view .nav{
   background: rgba(6,15,24,.75); backdrop-filter: blur(18px) saturate(140%);
   border-bottom: 1px solid rgba(234,233,232,.08); padding: 1rem 5vw;
